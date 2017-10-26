@@ -29,7 +29,7 @@ void Table::add_column_definition(const std::string& name, const std::string& ty
   DebugAssert(_column_names.size() == _column_types.size(), "Every column needs a name and type");
 
   // This does not work because numeric_limits does not work on STRONG_TYPEDEFs
-  //Assert(_column_names.size() < static_cast<size_t>(std::numeric_limits<ChunkID>::max()), "Too many columns");
+  // Assert(_column_names.size() < static_cast<size_t>(std::numeric_limits<ChunkID>::max()), "Too many columns");
 
   _column_names.emplace_back(name);
   _column_types.emplace_back(type);
