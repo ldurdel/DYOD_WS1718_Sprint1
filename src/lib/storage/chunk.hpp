@@ -40,7 +40,7 @@ class Chunk : private Noncopyable {
 
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
-  void append(const std::vector<AllTypeVariant> & values);
+  void append(const std::vector<AllTypeVariant>& values);
 
   // Returns the column at a given position
   std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
