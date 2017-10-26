@@ -15,6 +15,8 @@ namespace opossum {
 // by mapping table names to table instances.
 class StorageManager : private Noncopyable {
  public:
+  static StorageManager& get();
+
   // adds a table to the storage manager
   void add_table(const std::string& name, std::shared_ptr<Table> table);
 
@@ -30,8 +32,7 @@ class StorageManager : private Noncopyable {
   // returns a list of all table names
   std::vector<std::string> table_names() const;
 
-  // prints the table on the given stream
-  // returning the number of columns, rows, and chunks
+  // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)
   void print(std::ostream& out = std::cout) const;
 
   // deletes the entire StorageManager and creates a new one, used especially in tests
@@ -40,6 +41,9 @@ class StorageManager : private Noncopyable {
   StorageManager(StorageManager&&) = delete;
 
  protected:
+  StorageManager() {}
+  StorageManager& operator=(StorageManager&&) = default;
+
   // Implementation goes here
 };
 }  // namespace opossum

@@ -64,9 +64,12 @@ class Table : private Noncopyable {
   uint32_t chunk_size() const;
 
   // adds column definition without creating the actual columns
+  // this is helpful when, e.g., an operator first creates the structure of the table
+  // and then adds chunk by chunk
   void add_column_definition(const std::string& name, const std::string& type);
 
   // adds a column to the end, i.e., right, of the table
+  // the added column should have the same length as existing columns (if any)
   void add_column(const std::string& name, const std::string& type);
 
   // inserts a row at the end of the table
