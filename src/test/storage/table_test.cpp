@@ -71,4 +71,10 @@ TEST_F(StorageTableTest, GetColumnIdByName) {
 
 TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t.chunk_size(), 2u); }
 
+TEST_F(StorageTableTest, AddColumnsToNonEmptyTable) {
+  EXPECT_NO_THROW(t.add_column("foo1", "int"));
+  t.append({4, "Hello,", 27});
+  EXPECT_THROW(t.add_column("foo2", "int"), std::exception);
+}
+
 }  // namespace opossum
