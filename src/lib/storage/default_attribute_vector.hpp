@@ -8,17 +8,17 @@
 namespace opossum {
 
 // Stores entries with the same bit length as the data type behind ValueID.
-class DefaultAttributeVector : BaseAttributeVector {
+class DefaultAttributeVector : public BaseAttributeVector {
  public:
   explicit DefaultAttributeVector(size_t number_of_entries);
 
-  ValueID get(const size_t i);
+  ValueID get(const size_t i) const override;
 
-  void set(const size_t i, const ValueID value_id);
+  void set(const size_t i, const ValueID value_id) override;
 
-  size_t size();
+  size_t size() const override;
 
-  AttributeVectorWidth width();
+  AttributeVectorWidth width() const override;
 
  protected:
   std::vector<ValueID> _values;
