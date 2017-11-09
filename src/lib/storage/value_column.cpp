@@ -16,8 +16,7 @@ namespace opossum {
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
   PerformanceWarning("operator[] used");
-  Assert(i < _values.size(), "Index is out of bounds");
-  return AllTypeVariant{_values[i]};
+  return _values.at(i);
 }
 
 template <typename T>

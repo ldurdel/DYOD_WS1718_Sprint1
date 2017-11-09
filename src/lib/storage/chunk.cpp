@@ -23,15 +23,12 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 }
 
-std::shared_ptr<BaseColumn> Chunk::get_column(ColumnID column_id) const {
-  Assert(column_id < _columns.size(), "Column index out of bounds");
-  return _columns[column_id];
-}
+std::shared_ptr<BaseColumn> Chunk::get_column(ColumnID column_id) const { return _columns.at(column_id); }
 
 uint16_t Chunk::col_count() const { return _columns.size(); }
 
 uint32_t Chunk::size() const {
-  if (_columns.size() == 0) {
+  if (_columns.empty()) {
     return 0;
   }
 

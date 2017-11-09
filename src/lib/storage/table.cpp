@@ -28,8 +28,8 @@ void Table::add_column_definition(const std::string& name, const std::string& ty
   Assert(_chunks.front().size() == 0, nonEmptyErrorMessage);
   DebugAssert(_column_names.size() == _column_types.size(), "Every column needs a name and type");
 
-  // This does not work because numeric_limits does not work on STRONG_TYPEDEFs
-  // Assert(_column_names.size() < static_cast<size_t>(std::numeric_limits<ChunkID>::max()), "Too many columns");
+  Assert(_column_names.size() < static_cast<size_t>(std::numeric_limits<ChunkID::base_type>::max()),
+         "Too many columns");
 
   _column_names.emplace_back(name);
   _column_types.emplace_back(type);
@@ -64,15 +64,15 @@ void Table::create_new_chunk() {
 void Table::_create_missing_columns() {
   DebugAssert(_column_names.size() == _column_types.size(), "Every column needs a name and type");
 
-  Chunk& lastChunk = _chunks.back();
+  Chunk& last_chunk = _chunks.back();
 
   // Assuming that columns may only be created, we can assume that already existing columns match
   // our stored definition
-  auto firstMissingColumnIndex = lastChunk.col_count();
+  auto first_missing_column_index = last_chunk.col_count();
 
-  for (auto index = firstMissingColumnIndex; index < _column_types.size(); ++index) {
+  for (auto index = first_missing_column_index; index < _column_types.size(); ++index) {
     auto column = make_shared_by_column_type<BaseColumn, ValueColumn>(_column_types[index]);
-    lastChunk.add_column(column);
+    last_chunk.add_column(column);
   }
 
   _chunk_matches_definitions = true;
@@ -92,7 +92,7 @@ ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size())
 
 ColumnID Table::column_id_by_name(const std::string& column_name) const {
   DebugAssert(_column_names.size() == _column_types.size(), "Every column needs a name and type");
-  for (auto column_index = 0u; column_index < _column_names.size(); ++column_index) {
+  for (size_t column_index = 0; column_index < _column_names.size(); ++column_index) {
     if (_column_names[column_index] == column_name) {
       return static_cast<ColumnID>(column_index);
     }
@@ -104,25 +104,13 @@ uint32_t Table::chunk_size() const { return _chunk_size; }
 
 const std::vector<std::string>& Table::column_names() const { return _column_names; }
 
-const std::string& Table::column_name(ColumnID column_id) const {
-  Assert(column_id < _column_names.size(), "column id out of range");
-  return _column_names[column_id];
-}
+const std::string& Table::column_name(ColumnID column_id) const { return _column_names.at(column_id); }
 
-const std::string& Table::column_type(ColumnID column_id) const {
-  Assert(column_id < _column_types.size(), "column id out of range");
-  return _column_types[column_id];
-}
+const std::string& Table::column_type(ColumnID column_id) const { return _column_types.at(column_id); }
 
-Chunk& Table::get_chunk(ChunkID chunk_id) {
-  Assert(chunk_id < _chunks.size(), "chunk id out of range");
-  return _chunks[chunk_id];
-}
+Chunk& Table::get_chunk(ChunkID chunk_id) { return _chunks.at(chunk_id); }
 
-const Chunk& Table::get_chunk(ChunkID chunk_id) const {
-  Assert(chunk_id < _chunks.size(), "chunk id out of range");
-  return _chunks[chunk_id];
-}
+const Chunk& Table::get_chunk(ChunkID chunk_id) const { return _chunks.at(chunk_id); }
 
 void Table::compress_chunk(ChunkID chunk_id) { throw std::runtime_error("TODO"); }
 
