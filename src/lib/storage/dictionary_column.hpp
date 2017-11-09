@@ -11,6 +11,7 @@
 
 #include "all_type_variant.hpp"
 #include "default_attribute_vector.hpp"
+#include "fitted_attribute_vector.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
@@ -115,8 +116,16 @@ class DictionaryColumn : public BaseColumn {
     }
 
     // ToDo: Implement logic that chooses the best AttributeVector class based on the number of different values
-    _attribute_vector =
-        std::dynamic_pointer_cast<BaseAttributeVector>(std::make_shared<DefaultAttributeVector>(column.size()));
+    if (_dictionary->size() <= std::numeric_limits<uint8_t>::max()) {
+      _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(
+          std::make_shared<FittedAttributeVector<uint8_t>>(column.size()));
+    } else if (_dictionary->size() <= std::numeric_limits<uint16_t>::max()) {
+      _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(
+          std::make_shared<FittedAttributeVector<uint16_t>>(column.size()));
+    } else {
+      _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(
+          std::make_shared<FittedAttributeVector<uint32_t>>(column.size()));
+    }
 
     // Now, fill the attribute vector (for each value, perform binary search to find the dictionary index)
     // (Since we created _dictionary by using a set, we can be sure that each value exists exactly once,
