@@ -64,15 +64,15 @@ void Table::create_new_chunk() {
 void Table::_create_missing_columns() {
   DebugAssert(_column_names.size() == _column_types.size(), "Every column needs a name and type");
 
-  Chunk& lastChunk = _chunks.back();
+  Chunk& last_chunk = _chunks.back();
 
   // Assuming that columns may only be created, we can assume that already existing columns match
   // our stored definition
-  auto firstMissingColumnIndex = lastChunk.col_count();
+  auto first_missing_column_index = last_chunk.col_count();
 
-  for (auto index = firstMissingColumnIndex; index < _column_types.size(); ++index) {
+  for (auto index = first_missing_column_index; index < _column_types.size(); ++index) {
     auto column = make_shared_by_column_type<BaseColumn, ValueColumn>(_column_types[index]);
-    lastChunk.add_column(column);
+    last_chunk.add_column(column);
   }
 
   _chunk_matches_definitions = true;
