@@ -10,9 +10,10 @@
 
 namespace opossum {
 
-StorageManager StorageManager::_instance{};
-
-StorageManager& StorageManager::get() { return _instance; }
+StorageManager& StorageManager::get() {
+  static StorageManager _instance;
+  return _instance;
+}
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(!has_table(name), "Duplicate table name");
@@ -43,6 +44,6 @@ void StorageManager::print(std::ostream& out) const {
   }
 }
 
-void StorageManager::reset() { _instance = StorageManager{}; }
+void StorageManager::reset() { get() = StorageManager{}; }
 
 }  // namespace opossum
