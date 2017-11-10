@@ -4,8 +4,6 @@ set(
     all_type_variant.hpp
     resolve_type.hpp
     storage/base_attribute_vector.hpp
-    storage/default_attribute_vector.hpp
-    storage/default_attribute_vector.cpp
     storage/base_column.hpp
     storage/chunk.cpp
     storage/chunk.hpp

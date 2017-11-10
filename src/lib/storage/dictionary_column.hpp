@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "default_attribute_vector.hpp"
 #include "fitted_attribute_vector.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
