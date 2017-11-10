@@ -32,12 +32,15 @@ TEST_F(StorageTableTest, ChunkCount) {
 
 TEST_F(StorageTableTest, GetChunk) {
   t.get_chunk(ChunkID{0});
-  // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t.get_chunk(ChunkID{q}), std::exception);
   t.append({4, "Hello,"});
   t.append({6, "world"});
   t.append({3, "!"});
   t.get_chunk(ChunkID{1});
+  EXPECT_ANY_THROW(t.get_chunk(ChunkID{2}));
+
+  // For the coverage
+  const auto& const_chunk = t.get_chunk(ChunkID{0});
+  EXPECT_EQ(const_chunk.size(), 2u);
 }
 
 TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t.col_count(), 2u); }
@@ -75,6 +78,18 @@ TEST_F(StorageTableTest, AddColumnsToNonEmptyTable) {
   EXPECT_NO_THROW(t.add_column("foo1", "int"));
   t.append({4, "Hello,", 27});
   EXPECT_THROW(t.add_column("foo2", "int"), std::exception);
+}
+
+TEST_F(StorageTableTest, LazyColumnDefinitionInitialization) {
+  t.add_column_definition("col_3", "string");
+  EXPECT_NO_THROW(t.append({1, "stringCol1", "stringCol2"}));
+}
+
+TEST_F(StorageTableTest, ColumnNames) {
+  auto column_names = t.column_names();
+  EXPECT_EQ(column_names.size(), 2u);
+  EXPECT_EQ(column_names[0], "col_1");
+  EXPECT_EQ(column_names[1], "col_2");
 }
 
 }  // namespace opossum
