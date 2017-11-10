@@ -1,4 +1,5 @@
 #include <memory>
+#include <string>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -50,4 +51,21 @@ TEST_F(StorageStorageManagerTest, HasTable) {
   EXPECT_EQ(sm.has_table("first_table"), true);
 }
 
+TEST_F(StorageStorageManagerTest, TableNames) {
+  auto& sm = StorageManager::get();
+  auto tableNames = sm.table_names();
+  EXPECT_EQ(tableNames.size(), 2u);
+  EXPECT_EQ(tableNames[0], "first_table");
+  EXPECT_EQ(tableNames[1], "second_table");
+}
+
+TEST_F(StorageStorageManagerTest, PrintTables) {
+  auto& sm = StorageManager::get();
+  std::ostringstream stream;
+
+  sm.print(stream);
+  std::string expected = "first_table\t0\t0\t1\nsecond_table\t0\t0\t1\n";
+
+  EXPECT_EQ(stream.str(), expected);
+}
 }  // namespace opossum

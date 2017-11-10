@@ -30,7 +30,7 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const 
 bool StorageManager::has_table(const std::string& name) const { return _tables.count(name) > 0; }
 
 std::vector<std::string> StorageManager::table_names() const {
-  std::vector<std::string> names;
+  std::vector<std::string> names(_tables.size());
   std::transform(_tables.cbegin(), _tables.cend(), names.begin(),
                  [](const auto& key_value) { return key_value.first; });
   return names;
