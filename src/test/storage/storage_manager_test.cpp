@@ -53,10 +53,10 @@ TEST_F(StorageStorageManagerTest, HasTable) {
 
 TEST_F(StorageStorageManagerTest, TableNames) {
   auto& sm = StorageManager::get();
-  auto tableNames = sm.table_names();
-  EXPECT_EQ(tableNames.size(), 2u);
-  EXPECT_EQ(tableNames[0], "first_table");
-  EXPECT_EQ(tableNames[1], "second_table");
+  auto table_names = sm.table_names();
+  EXPECT_EQ(table_names.size(), 2u);
+  EXPECT_EQ(table_names[0], "first_table");
+  EXPECT_EQ(table_names[1], "second_table");
 }
 
 TEST_F(StorageStorageManagerTest, PrintTables) {
