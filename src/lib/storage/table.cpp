@@ -17,8 +17,7 @@
 
 namespace opossum {
 
-Table::Table(const uint32_t chunk_size)
-    : _chunk_size{chunk_size}, _chunks{}, _column_names{}, _column_types{}, _chunk_matches_definitions{true} {
+Table::Table(const uint32_t chunk_size) : _chunk_size{chunk_size}, _chunks{}, _column_names{}, _column_types{} {
   create_new_chunk();
 }
 
@@ -33,7 +32,6 @@ void Table::add_column_definition(const std::string& name, const std::string& ty
 
   _column_names.emplace_back(name);
   _column_types.emplace_back(type);
-  _chunk_matches_definitions = false;
 }
 
 void Table::add_column(const std::string& name, const std::string& type) {
@@ -42,7 +40,7 @@ void Table::add_column(const std::string& name, const std::string& type) {
 }
 
 void Table::append(std::vector<AllTypeVariant> values) {
-  if (!_chunk_matches_definitions) {
+  if (!_chunk_matches_definitions()) {
     _create_missing_columns();
   }
   if (_chunk_size != 0 && _chunks.back().size() >= _chunk_size) {
@@ -53,7 +51,7 @@ void Table::append(std::vector<AllTypeVariant> values) {
 
 void Table::create_new_chunk() {
   Assert(_chunks.size() == 0 || _chunks.back().size() > 0, "Cannot create chunk on top of empty chunk");
-  DebugAssert(_chunk_matches_definitions, "Creating a new chunk implies that column modifications are synchronized");
+  DebugAssert(_chunk_matches_definitions(), "Creating a new chunk implies that column modifications are synchronized");
 
   _chunks.emplace_back();
 
@@ -74,8 +72,6 @@ void Table::_create_missing_columns() {
     auto column = make_shared_by_column_type<BaseColumn, ValueColumn>(_column_types[index]);
     last_chunk.add_column(column);
   }
-
-  _chunk_matches_definitions = true;
 }
 
 uint16_t Table::col_count() const {
@@ -111,6 +107,13 @@ const std::string& Table::column_type(ColumnID column_id) const { return _column
 Chunk& Table::get_chunk(ChunkID chunk_id) { return _chunks.at(chunk_id); }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const { return _chunks.at(chunk_id); }
+
+bool Table::_chunk_matches_definitions() const {
+  // Since we cannot alter column specifications after they have been created,
+  // it suffices to check for the same length of columns in our definition and the
+  // last chunk's definition
+  return _chunks.empty() || (_chunks.back().col_count() == _column_names.size());
+}
 
 void Table::compress_chunk(ChunkID chunk_id) { throw std::runtime_error("TODO"); }
 

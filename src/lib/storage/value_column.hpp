@@ -21,7 +21,7 @@ class ValueColumn : public BaseColumn {
 
   // return the number of entries
   size_t size() const override;
- 
+
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.
   // e.g. auto& values = col.values(); and then: values.at(i); in your loop.
