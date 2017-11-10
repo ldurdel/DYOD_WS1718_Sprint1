@@ -83,12 +83,13 @@ class Table : private Noncopyable {
   // Updates the first (and empty) chunk to match _column_definitions
   void _create_missing_columns();
 
+  // Indicates that there are new _column_definitions entries that aren't represented in _chunks
+  bool _chunk_matches_definitions() const;
+
  protected:
   const uint32_t _chunk_size;
   std::vector<Chunk> _chunks;
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
-  // Indicates that there are new _column_definitions entries that aren't represented in _chunks
-  bool _chunk_matches_definitions;
 };
 }  // namespace opossum
