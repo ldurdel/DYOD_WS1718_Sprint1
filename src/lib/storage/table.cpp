@@ -27,7 +27,7 @@ void Table::add_column_definition(const std::string& name, const std::string& ty
   Assert(_chunks.front().size() == 0, nonEmptyErrorMessage);
   DebugAssert(_column_names.size() == _column_types.size(), "Every column needs a name and type");
 
-  Assert(_column_names.size() < static_cast<size_t>(std::numeric_limits<ChunkID::base_type>::max()),
+  Assert(_column_names.size() < static_cast<size_t>(std::numeric_limits<ChunkID::base_type>::max()) + 1,
          "Too many columns");
 
   _column_names.emplace_back(name);

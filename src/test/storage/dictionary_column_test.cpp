@@ -1,3 +1,4 @@
+#include <limits>
 #include <memory>
 #include <string>
 
@@ -128,6 +129,61 @@ TEST_F(StorageDictionaryColumnTest, ImmutableDictionaryColumn) {
   auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<std::string>>(col);
 
   EXPECT_ANY_THROW(dict_col->append("ohai"));
+}
+
+TEST_F(StorageDictionaryColumnTest, DictionaryWidthDistinctValues) {
+  // Expect the correct dictionary width if the value column is filled with distinct values
+  uint32_t unique_values_count = 0;
+
+  auto col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
+  auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  EXPECT_EQ(dict_col->attribute_vector()->width(), 1);
+
+  for (; unique_values_count <= std::numeric_limits<uint8_t>::max(); ++unique_values_count) {
+    vc_int->append(static_cast<int>(unique_values_count));
+  }
+
+  col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
+  dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  EXPECT_EQ(dict_col->attribute_vector()->width(), 1);
+
+  // Now add the one value that forces a new width datatype (unit16)
+  vc_int->append(static_cast<int>(unique_values_count++));
+
+  col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
+  dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  EXPECT_EQ(dict_col->attribute_vector()->width(), 2);
+
+  // Now test the last uint16 value
+  for (; unique_values_count <= std::numeric_limits<uint16_t>::max(); ++unique_values_count) {
+    vc_int->append(static_cast<int>(unique_values_count));
+  }
+
+  col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
+  dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  EXPECT_EQ(dict_col->attribute_vector()->width(), 2);
+
+  // lastly uint32
+  vc_int->append(static_cast<int>(unique_values_count++));
+
+  col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
+  dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  EXPECT_EQ(dict_col->attribute_vector()->width(), 4);
+}
+
+TEST_F(StorageDictionaryColumnTest, DictionaryWithDuplicateValues) {
+  // Expect the correct dictionary width if the value column is filled with partly duplicate values
+  uint32_t values_count = 0;
+  uint32_t unique_values_modulo = 256;
+
+  // First, we add 256 unique values, but add 64k values in total. They should still fit into an 8 bit dictionary
+  for (; values_count <= std::numeric_limits<uint16_t>::max(); ++values_count) {
+    vc_int->append(static_cast<int>(values_count % unique_values_modulo));
+  }
+
+  auto col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
+  auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  EXPECT_EQ(dict_col->attribute_vector()->width(), 1);
 }
 
 // TODO(student): You should add some more tests here (full coverage would be appreciated) and possibly in other files.

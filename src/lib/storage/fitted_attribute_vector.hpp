@@ -14,9 +14,7 @@ namespace opossum {
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 class FittedAttributeVector : public BaseAttributeVector {
  public:
-  explicit FittedAttributeVector(size_t number_of_entries) : _values(number_of_entries) {
-    Assert(number_of_entries < std::numeric_limits<T>::max(), "Number of entries too large for underlying type");
-  }
+  explicit FittedAttributeVector(size_t number_of_entries) : _values(number_of_entries) {}
 
   ValueID get(const size_t i) const override { return ValueID{_values.at(i)}; };
 

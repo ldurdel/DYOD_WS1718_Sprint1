@@ -116,10 +116,10 @@ class DictionaryColumn : public BaseColumn {
     }
 
     // ToDo: Implement logic that chooses the best AttributeVector class based on the number of different values
-    if (_dictionary->size() <= std::numeric_limits<uint8_t>::max()) {
+    if (_dictionary->size() <= static_cast<uint64_t>(std::numeric_limits<uint8_t>::max()) + 1) {
       _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(
           std::make_shared<FittedAttributeVector<uint8_t>>(column.size()));
-    } else if (_dictionary->size() <= std::numeric_limits<uint16_t>::max()) {
+    } else if (_dictionary->size() <= static_cast<uint64_t>(std::numeric_limits<uint16_t>::max()) + 1) {
       _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(
           std::make_shared<FittedAttributeVector<uint16_t>>(column.size()));
     } else {
