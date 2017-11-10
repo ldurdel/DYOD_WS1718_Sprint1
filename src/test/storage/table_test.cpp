@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/resolve_type.hpp"
+#include "../lib/storage/dictionary_column.hpp"
 #include "../lib/storage/table.hpp"
 
 namespace opossum {
@@ -90,6 +91,24 @@ TEST_F(StorageTableTest, ColumnNames) {
   EXPECT_EQ(column_names.size(), 2u);
   EXPECT_EQ(column_names[0], "col_1");
   EXPECT_EQ(column_names[1], "col_2");
+}
+
+TEST_F(StorageTableTest, CompressChunk) {
+  t.append({4, "Hello,"});
+  t.append({6, "world"});
+  t.append({3, "!"});
+
+  EXPECT_EQ(t.row_count(), 3u);
+  EXPECT_EQ(t.chunk_count(), 2u);
+
+  t.compress_chunk(ChunkID{0});
+  EXPECT_EQ(t.row_count(), 3u);
+  EXPECT_EQ(t.chunk_count(), 2u);
+
+  auto column_ptr = t.get_chunk(ChunkID{0}).get_column(ColumnID{0});
+  auto dictionary_column_ptr = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(column_ptr);
+  EXPECT_TRUE(dictionary_column_ptr);
+  EXPECT_EQ(dictionary_column_ptr->unique_values_count(), 2u);
 }
 
 }  // namespace opossum
