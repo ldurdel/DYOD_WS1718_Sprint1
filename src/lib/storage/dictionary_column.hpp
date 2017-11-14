@@ -93,15 +93,12 @@ class DictionaryColumn : public BaseColumn {
  private:
   // puts all values in a map to deduplicate, then reads out the map to build up values
   void _compress_values(const std::shared_ptr<BaseColumn>& base_column) {
-    // ToDo: use correct smart pointer type
     const std::shared_ptr<ValueColumn<T>>& p_column = std::dynamic_pointer_cast<ValueColumn<T>>(base_column);
     Assert(p_column, "base_column has invalid type that does not match <T>");
     const ValueColumn<T>& column = *p_column;
 
     // First step: iterate over all AllTypeVariant values and deduplicate
     std::set<T> unique_values;
-
-    // ToDo: std::copy oder iterator oder irgendwas optimiertes
     for (auto index = 0u; index < column.size(); ++index) {
       unique_values.insert(type_cast<T>(column[index]));
     }
@@ -115,7 +112,7 @@ class DictionaryColumn : public BaseColumn {
       (*_dictionary)[counter++] = unique_value;
     }
 
-    // ToDo: Implement logic that chooses the best AttributeVector class based on the number of different values
+    // Choose the best AttributeVector class based on the number of different values
     if (_dictionary->size() <= static_cast<uint64_t>(std::numeric_limits<uint8_t>::max()) + 1) {
       _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(
           std::make_shared<FittedAttributeVector<uint8_t>>(column.size()));
