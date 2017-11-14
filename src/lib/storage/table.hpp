@@ -79,6 +79,9 @@ class Table : private Noncopyable {
   // creates a new chunk and appends it
   void create_new_chunk();
 
+  // compresses a ValueColumn into a DictionaryColumn
+  void compress_chunk(ChunkID chunk_id);
+
  protected:
   // Updates the first (and empty) chunk to match _column_definitions
   void _create_missing_columns();
