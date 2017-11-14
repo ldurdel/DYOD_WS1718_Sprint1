@@ -3,9 +3,11 @@ set(
     SOURCES
     all_type_variant.hpp
     resolve_type.hpp
+    storage/base_attribute_vector.hpp
     storage/base_column.hpp
     storage/chunk.cpp
     storage/chunk.hpp
+    storage/dictionary_column.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
     storage/table.cpp

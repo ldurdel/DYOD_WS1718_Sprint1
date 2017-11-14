@@ -115,4 +115,6 @@ bool Table::_chunk_matches_definitions() const {
   return _chunks.empty() || (_chunks.back().col_count() == _column_names.size());
 }
 
+void Table::compress_chunk(ChunkID chunk_id) { throw std::runtime_error("TODO"); }
+
 }  // namespace opossum
