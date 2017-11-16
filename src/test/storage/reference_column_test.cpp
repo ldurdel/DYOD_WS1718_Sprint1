@@ -38,6 +38,11 @@ class ReferenceColumnTest : public ::testing::Test {
     _test_table_dict->compress_chunk(ChunkID(0));
     _test_table_dict->compress_chunk(ChunkID(1));
     StorageManager::get().add_table("test_table_dict", _test_table_dict);
+
+    // To test accessors
+    _test_pos_list =
+        std::make_shared<PosList>(std::initializer_list<RowID>({{ChunkID{0}, 0}, {ChunkID{0}, 1}, {ChunkID{0}, 2}}));
+    _test_ref_column = std::make_shared<ReferenceColumn>(_test_table, ColumnID{0}, _test_pos_list);
   }
 
   virtual void TearDown() {
@@ -49,7 +54,8 @@ class ReferenceColumnTest : public ::testing::Test {
 
  public:
   std::shared_ptr<opossum::Table> _test_table, _test_table_dict;
-  std::shared_ptr<ReferenceColumn> _ref_column_1;
+  std::shared_ptr<PosList> _test_pos_list;
+  std::shared_ptr<ReferenceColumn> _test_ref_column;
 };
 
 TEST_F(ReferenceColumnTest, IsImmutable) {
@@ -92,4 +98,11 @@ TEST_F(ReferenceColumnTest, RetrievesValuesFromChunks) {
   EXPECT_EQ(ref_column[2], column_2[1]);
 }
 
+TEST_F(ReferenceColumnTest, GetSize) { EXPECT_EQ(_test_ref_column->size(), 3u); }
+
+TEST_F(ReferenceColumnTest, GetPosList) { EXPECT_EQ(_test_ref_column->pos_list(), _test_pos_list); }
+
+TEST_F(ReferenceColumnTest, GetReferencedTable) { EXPECT_EQ(_test_ref_column->referenced_table(), _test_table); }
+
+TEST_F(ReferenceColumnTest, GetColumnId) { EXPECT_EQ(_test_ref_column->referenced_column_id(), ColumnID{0}); }
 }  // namespace opossum
