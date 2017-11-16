@@ -358,6 +358,7 @@ _CPP_HEADERS = frozenset([
     'mutex',
     'new',
     'numeric',
+    'optional',
     'ostream',
     'queue',
     'random',

@@ -51,6 +51,8 @@ struct RowID {
   }
 };
 
+enum class ScanType { OpEquals, OpNotEquals, OpLessThan, OpLessThanEquals, OpGreaterThan, OpGreaterThanEquals };
+
 using PosList = std::vector<RowID>;
 
 class Noncopyable {
