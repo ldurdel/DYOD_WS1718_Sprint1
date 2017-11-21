@@ -13,6 +13,8 @@
 #include "value_column.hpp"
 
 #include "resolve_type.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -108,6 +110,10 @@ Chunk& Table::get_chunk(ChunkID chunk_id) { return *(_chunks.at(chunk_id)); }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const { return *(_chunks.at(chunk_id)); }
 
+void emplace_chunk(Chunk chunk) {
+  // Implementation goes here
+}
+
 bool Table::_chunk_matches_definitions() const {
   // Since we cannot alter column specifications after they have been created,
   // it suffices to check for the same length of columns in our definition and the
@@ -133,6 +139,3 @@ void Table::compress_chunk(ChunkID chunk_id) {
 }
 
 }  // namespace opossum
-#include "types.hpp"
-
-#include "utils/assert.hpp"

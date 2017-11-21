@@ -140,10 +140,8 @@ namespace opossum {
 //   tests[ScanType::OpLessThanEquals] = {100, 102, 104};
 //   tests[ScanType::OpGreaterThan] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 //   tests[ScanType::OpGreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-//   tests[ScanType::OpBetween] = {104, 106, 108};
 //   for (const auto& test : tests) {
-//     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4,
-//                                             std::optional<AllTypeVariant>(9));
+//     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4);
 //     scan->execute();
 
 //     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -160,12 +158,11 @@ namespace opossum {
 //   tests[ScanType::OpLessThanEquals] = {100, 102, 104};
 //   tests[ScanType::OpGreaterThan] = {106};
 //   tests[ScanType::OpGreaterThanEquals] = {104, 106};
-//   tests[ScanType::OpBetween] = {104, 106};
 //   for (const auto& test : tests) {
 //     auto scan1 = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{1}, ScanType::OpLessThan, 108);
 //     scan1->execute();
 
-//     auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{0}, test.first, 4, std::optional<AllTypeVariant>(9));
+//     auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{0}, test.first, 4);
 //     scan2->execute();
 
 //     ASSERT_COLUMN_EQ(scan2->get_output(), ColumnID{1}, test.second);
@@ -193,11 +190,9 @@ namespace opossum {
 //   tests[ScanType::OpLessThanEquals] = all_rows;
 //   tests[ScanType::OpGreaterThan] = no_rows;
 //   tests[ScanType::OpGreaterThanEquals] = no_rows;
-//   tests[ScanType::OpBetween] = no_rows;
 
 //   for (const auto& test : tests) {
-//     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 30,
-//                                             std::optional<AllTypeVariant>(34));
+//     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 30);
 //     scan->execute();
 
 //     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -215,11 +210,9 @@ namespace opossum {
 //   tests[ScanType::OpLessThanEquals] = no_rows;
 //   tests[ScanType::OpGreaterThan] = all_rows;
 //   tests[ScanType::OpGreaterThanEquals] = all_rows;
-//   tests[ScanType::OpBetween] = all_rows;
 
 //   for (const auto& test : tests) {
-//     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0} /* "a" */, test.first, -10,
-//                                             std::optional<AllTypeVariant>(34));
+//     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0} /* "a" */, test.first, -10);
 //     scan->execute();
 
 //     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -236,11 +229,9 @@ namespace opossum {
 //   tests[ScanType::OpGreaterThan] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 //   tests[ScanType::OpGreaterThanEquals] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 //   tests[ScanType::OpNotEquals] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-//   tests[ScanType::OpBetween] = {100, 102, 104, 106, 108, 110};
 
 //   for (const auto& test : tests) {
-//     auto scan = std::make_shared<opossum::TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 0,
-//                                                      std::optional<AllTypeVariant>(10));
+//     auto scan = std::make_shared<opossum::TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 0);
 //     scan->execute();
 
 //     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);

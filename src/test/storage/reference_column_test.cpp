@@ -27,16 +27,17 @@ class ReferenceColumnTest : public ::testing::Test {
     _test_table->append({123, 456.7f});
     _test_table->append({1234, 457.7f});
     _test_table->append({12345, 458.7f});
+    _test_table->append({54321, 458.7f});
     _test_table->append({12345, 458.7f});
-    // We had to insert an additional row here in order to fix RetrievesValuesFromChunks
-    // (discussion here: https://piazza.com/class/j8vgbo26s8g689?cid=28)
-    _test_table->append({12345, 458.7f});
+
     _test_table_dict = std::make_shared<opossum::Table>(5);
     _test_table_dict->add_column("a", "int");
     _test_table_dict->add_column("b", "int");
     for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
+
     _test_table_dict->compress_chunk(ChunkID(0));
     _test_table_dict->compress_chunk(ChunkID(1));
+
     StorageManager::get().add_table("test_table_dict", _test_table_dict);
 
     // To test accessors
@@ -46,6 +47,7 @@ class ReferenceColumnTest : public ::testing::Test {
   }
 
   virtual void TearDown() {
+    // TODO FIXME still relevant?
     // We had to add the tearDown method to allow multiple test run without failing
     if (StorageManager::get().has_table("test_table_dict")) {
       StorageManager::get().drop_table("test_table_dict");
