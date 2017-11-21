@@ -13,8 +13,6 @@
 #include "value_column.hpp"
 
 #include "resolve_type.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -110,10 +108,6 @@ Chunk& Table::get_chunk(ChunkID chunk_id) { return *(_chunks.at(chunk_id)); }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const { return *(_chunks.at(chunk_id)); }
 
-void emplace_chunk(Chunk chunk) {
-  // Implementation goes here
-}
-
 bool Table::_chunk_matches_definitions() const {
   // Since we cannot alter column specifications after they have been created,
   // it suffices to check for the same length of columns in our definition and the
@@ -135,7 +129,18 @@ void Table::compress_chunk(ChunkID chunk_id) {
     compressed_chunk->add_column(compressed_column);
   }
 
+<<<<<<< HEAD
   _chunks.at(chunk_id) = compressed_chunk;
 }
+=======
+void emplace_chunk(Chunk chunk) {
+  // Implementation goes here
+}
+
+void Table::compress_chunk(ChunkID chunk_id) { throw std::runtime_error("TODO"); }
+>>>>>>> 2e56e3e5d718cbf3d6eec4fa33b8deb2e2fdfad2
 
 }  // namespace opossum
+#include "types.hpp"
+
+#include "utils/assert.hpp"

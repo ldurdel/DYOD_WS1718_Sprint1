@@ -16,8 +16,11 @@ set(
     storage/chunk.cpp
     storage/chunk.hpp
     storage/dictionary_column.hpp
+<<<<<<< HEAD
     storage/fitted_attribute_vector.hpp
+=======
     storage/reference_column.hpp
+>>>>>>> 2e56e3e5d718cbf3d6eec4fa33b8deb2e2fdfad2
     storage/storage_manager.cpp
     storage/storage_manager.hpp
     storage/table.cpp
