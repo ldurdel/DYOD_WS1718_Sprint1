@@ -12,7 +12,6 @@
 
 namespace opossum {
 
-class BaseTableScanImpl;
 class Table;
 
 class TableScan : public AbstractOperator {
@@ -20,7 +19,7 @@ class TableScan : public AbstractOperator {
   TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID column_id, const ScanType scan_type,
             const AllTypeVariant search_value);
 
-  ~TableScan();
+  ~TableScan() = default;
 
   ColumnID column_id() const;
   ScanType scan_type() const;
@@ -28,6 +27,10 @@ class TableScan : public AbstractOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+
+  ColumnID _column_id;
+  ScanType _scan_type;
+  AllTypeVariant _search_value;
 };
 
 }  // namespace opossum
