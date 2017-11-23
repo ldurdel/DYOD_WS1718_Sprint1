@@ -18,10 +18,7 @@ class FittedAttributeVector : public BaseAttributeVector {
 
   ValueID get(const size_t i) const override { return ValueID{_values.at(i)}; };
 
-  void set(const size_t i, const ValueID value_id) override {
-    Assert(i < _values.size(), "Index out of bounds");
-    _values[i] = value_id;
-  };
+  void set(const size_t i, const ValueID value_id) override { _values.at(i) = value_id; };
 
   size_t size() const override { return _values.size(); };
 
