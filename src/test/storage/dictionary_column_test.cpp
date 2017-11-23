@@ -139,7 +139,8 @@ TEST_F(StorageDictionaryColumnTest, DictionaryWidthDistinctValues) {
   auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
   EXPECT_EQ(dict_col->attribute_vector()->width(), 1);
 
-  for (; unique_values_count <= std::numeric_limits<uint8_t>::max(); ++unique_values_count) {
+  // Last value ID (in this case 255) is reserved for INVALID_VALUE_ID
+  for (; unique_values_count < std::numeric_limits<uint8_t>::max(); ++unique_values_count) {
     vc_int->append(static_cast<int>(unique_values_count));
   }
 
@@ -155,7 +156,8 @@ TEST_F(StorageDictionaryColumnTest, DictionaryWidthDistinctValues) {
   EXPECT_EQ(dict_col->attribute_vector()->width(), 2);
 
   // Now test the last uint16 value
-  for (; unique_values_count <= std::numeric_limits<uint16_t>::max(); ++unique_values_count) {
+  // Last value ID (in this case 65535) is reserved for INVALID_VALUE_ID
+  for (; unique_values_count < std::numeric_limits<uint16_t>::max(); ++unique_values_count) {
     vc_int->append(static_cast<int>(unique_values_count));
   }
 
@@ -173,11 +175,12 @@ TEST_F(StorageDictionaryColumnTest, DictionaryWidthDistinctValues) {
 
 TEST_F(StorageDictionaryColumnTest, DictionaryWithDuplicateValues) {
   // Expect the correct dictionary width if the value column is filled with partly duplicate values
+  // Last value ID (in this case 255) is reserved for INVALID_VALUE_ID
   uint32_t values_count = 0;
-  uint32_t unique_values_modulo = 256;
+  uint32_t unique_values_modulo = 255;
 
-  // First, we add 256 unique values, but add 64k values in total. They should still fit into an 8 bit dictionary
-  for (; values_count <= std::numeric_limits<uint16_t>::max(); ++values_count) {
+  // First, we add 255 unique values, but add 64k values in total. They should still fit into an 8 bit dictionary
+  for (; values_count < std::numeric_limits<uint16_t>::max(); ++values_count) {
     vc_int->append(static_cast<int>(values_count % unique_values_modulo));
   }
 

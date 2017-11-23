@@ -4,7 +4,6 @@
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -31,7 +30,35 @@ class DictionaryColumn : public BaseColumn {
   /**
    * Creates a Dictionary column from a given value column.
    */
-  explicit DictionaryColumn(const std::shared_ptr<BaseColumn>& base_column) { _compress_values(base_column); }
+  explicit DictionaryColumn(const std::shared_ptr<BaseColumn>& base_column) {
+    const std::shared_ptr<ValueColumn<T>>& p_column = std::dynamic_pointer_cast<ValueColumn<T>>(base_column);
+    Assert(p_column, "base_column has invalid type that does not match <T>");
+    const ValueColumn<T>& column = *p_column;
+
+    // First step: iterate over all AllTypeVariant values and deduplicate
+    _dictionary = std::make_shared<std::vector<T>>(column.values());
+    std::sort(_dictionary->begin(), _dictionary->end());
+    auto last_iterator = std::unique(_dictionary->begin(), _dictionary->end());
+    _dictionary->erase(last_iterator, _dictionary->end());
+    _dictionary->shrink_to_fit();
+
+    // Choose the best AttributeVector class based on the number of different values
+    if (_dictionary->size() <= std::numeric_limits<uint8_t>::max()) {
+      _attribute_vector = std::make_shared<FittedAttributeVector<uint8_t>>(column.size());
+    } else if (_dictionary->size() <= std::numeric_limits<uint16_t>::max()) {
+      _attribute_vector = std::make_shared<FittedAttributeVector<uint16_t>>(column.size());
+    } else {
+      _attribute_vector = std::make_shared<FittedAttributeVector<uint32_t>>(column.size());
+    }
+
+    // Now, fill the attribute vector (for each value, perform binary search to find the dictionary index)
+    // (Since we created _dictionary by using a set, we can be sure that each value exists exactly once,
+    //  and thus we do not need to perform checks on the binary search result)
+    for (auto index = 0u; index < column.size(); ++index) {
+      auto iterator = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), type_cast<T>(column[index]));
+      _attribute_vector->set(index, ValueID{static_cast<ValueID::base_type>(iterator - _dictionary->cbegin())});
+    }
+  }
 
   // SEMINAR INFORMATION: Since most of these methods depend on the template parameter, you will have to implement
   // the DictionaryColumn in this file. Replace the method signatures with actual implementations.
@@ -50,7 +77,7 @@ class DictionaryColumn : public BaseColumn {
 
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const {
-    return std::dynamic_pointer_cast<const BaseAttributeVector>(_attribute_vector);
+    return std::static_pointer_cast<const BaseAttributeVector>(_attribute_vector);
   }
 
   // return the value represented by a given ValueID
@@ -89,49 +116,6 @@ class DictionaryColumn : public BaseColumn {
 
   // return the number of entries
   size_t size() const override { return _attribute_vector->size(); }
-
- private:
-  // puts all values in a map to deduplicate, then reads out the map to build up values
-  void _compress_values(const std::shared_ptr<BaseColumn>& base_column) {
-    const std::shared_ptr<ValueColumn<T>>& p_column = std::dynamic_pointer_cast<ValueColumn<T>>(base_column);
-    Assert(p_column, "base_column has invalid type that does not match <T>");
-    const ValueColumn<T>& column = *p_column;
-
-    // First step: iterate over all AllTypeVariant values and deduplicate
-    std::set<T> unique_values;
-    for (auto index = 0u; index < column.size(); ++index) {
-      unique_values.insert(type_cast<T>(column[index]));
-    }
-
-    // Create (sorted) dictionary
-    _dictionary = std::make_shared<std::vector<T>>(unique_values.size());
-
-    // (Set iterates in a sorted manner)
-    ValueID counter{0};
-    for (const auto& unique_value : unique_values) {
-      (*_dictionary)[counter++] = unique_value;
-    }
-
-    // Choose the best AttributeVector class based on the number of different values
-    if (_dictionary->size() <= static_cast<uint64_t>(std::numeric_limits<uint8_t>::max()) + 1) {
-      _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(
-          std::make_shared<FittedAttributeVector<uint8_t>>(column.size()));
-    } else if (_dictionary->size() <= static_cast<uint64_t>(std::numeric_limits<uint16_t>::max()) + 1) {
-      _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(
-          std::make_shared<FittedAttributeVector<uint16_t>>(column.size()));
-    } else {
-      _attribute_vector = std::dynamic_pointer_cast<BaseAttributeVector>(
-          std::make_shared<FittedAttributeVector<uint32_t>>(column.size()));
-    }
-
-    // Now, fill the attribute vector (for each value, perform binary search to find the dictionary index)
-    // (Since we created _dictionary by using a set, we can be sure that each value exists exactly once,
-    //  and thus we do not need to perform checks on the binary search result)
-    for (auto index = 0u; index < column.size(); ++index) {
-      auto iterator = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), type_cast<T>(column[index]));
-      _attribute_vector->set(index, ValueID{static_cast<ValueID::base_type>(iterator - _dictionary->cbegin())});
-    }
-  }
 
  protected:
   std::shared_ptr<std::vector<T>> _dictionary;
