@@ -43,9 +43,9 @@ class DictionaryColumn : public BaseColumn {
     _dictionary->shrink_to_fit();
 
     // Choose the best AttributeVector class based on the number of different values
-    if (_dictionary->size() <= static_cast<uint64_t>(std::numeric_limits<uint8_t>::max()) + 1) {
+    if (_dictionary->size() <= std::numeric_limits<uint8_t>::max()) {
       _attribute_vector = std::make_shared<FittedAttributeVector<uint8_t>>(column.size());
-    } else if (_dictionary->size() <= static_cast<uint64_t>(std::numeric_limits<uint16_t>::max()) + 1) {
+    } else if (_dictionary->size() <= std::numeric_limits<uint16_t>::max()) {
       _attribute_vector = std::make_shared<FittedAttributeVector<uint16_t>>(column.size());
     } else {
       _attribute_vector = std::make_shared<FittedAttributeVector<uint32_t>>(column.size());
