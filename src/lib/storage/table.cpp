@@ -13,8 +13,6 @@
 #include "resolve_type.hpp"
 #include "value_column.hpp"
 
-#include "resolve_type.hpp"
-
 namespace opossum {
 
 Table::Table(const uint32_t chunk_size) : _chunk_size{chunk_size}, _chunks{}, _column_names{}, _column_types{} {
@@ -108,8 +106,9 @@ Chunk& Table::get_chunk(ChunkID chunk_id) { return _chunks.at(chunk_id); }
 
 const Chunk& Table::get_chunk(ChunkID chunk_id) const { return _chunks.at(chunk_id); }
 
-void emplace_chunk(Chunk chunk) {
-  // TODO Implementation goes here
+void Table::emplace_chunk(Chunk chunk) {
+  // TODO implement
+  // TODO ... is this interface broken? Chunk is non-copyable.
 }
 
 bool Table::_chunk_matches_definitions() const {
