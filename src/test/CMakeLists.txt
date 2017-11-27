@@ -13,6 +13,7 @@ set(
     operators/get_table_test.cpp
     operators/print_test.cpp
     operators/table_scan_test.cpp
+    performance/table_scan_performance_test.cpp
     storage/chunk_test.cpp
     storage/dictionary_column_test.cpp
     storage/reference_column_test.cpp
