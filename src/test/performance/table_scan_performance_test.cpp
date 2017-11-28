@@ -1,18 +1,20 @@
 #include <memory>
 #include <random>
 #include <string>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/table_wrapper.hpp"
+#include "operators/get_table.hpp"
+#include "operators/table_scan.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
 
 class PerformanceTableScanTest : public BaseTest {
  protected:
-  void SetUp() override {
+  static void SetUpTestCase() {
     _random_table_small = std::make_shared<Table>(_entries_small / 10);
     _sorted_table_small = std::make_shared<Table>(_entries_small / 10);
     _random_table_medium = std::make_shared<Table>(_entries_medium / 10);
@@ -36,7 +38,7 @@ class PerformanceTableScanTest : public BaseTest {
     _fill_with_random_values(_random_table_large, _entries_large);
   }
 
-  void TearDown() override {
+  static void TearDownTestCase() {
     std::vector<std::string> table_names = {"randomSmall",  "sortedSmall", "randomMedium",
                                             "sortedMedium", "randomLarge", "sortedLarge"};
 
@@ -45,11 +47,13 @@ class PerformanceTableScanTest : public BaseTest {
         StorageManager::get().drop_table(table_name);
       }
     }
+
+    // ToDo arthur: destroy tables held by static pointers
   }
 
   // Simulates duplicate and sorted values. Fills the table with one column of unsigned integers,
   // duplicating 10 values before proceeding to the next one.
-  void _fill_with_sorted_values(std::shared_ptr<Table> table, int numberOfValues) {
+  static void _fill_with_sorted_values(std::shared_ptr<Table> table, int numberOfValues) {
     table->add_column("testColumn", "int");
 
     int currentValue = 0;
@@ -64,7 +68,7 @@ class PerformanceTableScanTest : public BaseTest {
 
   // Simulates unsorted and random values. Fills the table with one column of unsigned, random integer values
   // From the range of 0 to 1000000.
-  void _fill_with_random_values(std::shared_ptr<Table> table, int numberOfValues) {
+  static void _fill_with_random_values(std::shared_ptr<Table> table, int numberOfValues) {
     table->add_column("testColumn", "int");
 
     // https://stackoverflow.com/a/19728404
@@ -77,20 +81,44 @@ class PerformanceTableScanTest : public BaseTest {
     }
   }
 
+  void _scan_greater_than(std::string table_name, int threshold) {
+    auto get_table = std::make_shared<GetTable>(table_name);
+    get_table->execute();
+    auto table_scan = std::make_shared<TableScan>(get_table, ColumnID{0}, ScanType::OpGreaterThanEquals, threshold);
+    table_scan->execute();
+  }
+
   // Defines the number of entries for each type of table.
   // There will be number/10 entries per chunk
-  const int _entries_small = 100;
-  const int _entries_medium = 10000;
-  const int _entries_large = 1000000;
+  const static int _entries_small = 100;
+  const static int _entries_medium = 10000;
+  const static int _entries_large = 1000000;
 
-  std::shared_ptr<Table> _random_table_small;
-  std::shared_ptr<Table> _sorted_table_small;
-  std::shared_ptr<Table> _random_table_medium;
-  std::shared_ptr<Table> _sorted_table_medium;
-  std::shared_ptr<Table> _random_table_large;
-  std::shared_ptr<Table> _sorted_table_large;
+  static std::shared_ptr<Table> _random_table_small;
+  static std::shared_ptr<Table> _sorted_table_small;
+  static std::shared_ptr<Table> _random_table_medium;
+  static std::shared_ptr<Table> _sorted_table_medium;
+  static std::shared_ptr<Table> _random_table_large;
+  static std::shared_ptr<Table> _sorted_table_large;
 };
 
-TEST_F(PerformanceTableScanTest, EmptyTest) {}
+std::shared_ptr<Table> PerformanceTableScanTest::_random_table_small;
+std::shared_ptr<Table> PerformanceTableScanTest::_sorted_table_small;
+std::shared_ptr<Table> PerformanceTableScanTest::_random_table_medium;
+std::shared_ptr<Table> PerformanceTableScanTest::_sorted_table_medium;
+std::shared_ptr<Table> PerformanceTableScanTest::_random_table_large;
+std::shared_ptr<Table> PerformanceTableScanTest::_sorted_table_large;
+
+TEST_F(PerformanceTableScanTest, GreaterThanRandomSmall) { _scan_greater_than("randomSmall", 500000); }
+
+TEST_F(PerformanceTableScanTest, GreaterThanSortedSmall) { _scan_greater_than("sortedSmall", 5); }
+
+TEST_F(PerformanceTableScanTest, GreaterThanRandomMedium) { _scan_greater_than("randomMedium", 500000); }
+
+TEST_F(PerformanceTableScanTest, GreaterThanSortedMedium) { _scan_greater_than("sortedMedium", 50); }
+
+TEST_F(PerformanceTableScanTest, GreaterThanRandomLarge) { _scan_greater_than("randomLarge", 500000); }
+
+TEST_F(PerformanceTableScanTest, GreaterThanSortedLarge) { _scan_greater_than("sortedLarge", 50); }
 
 }  // namespace opossum
