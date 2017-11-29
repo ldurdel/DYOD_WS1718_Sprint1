@@ -22,13 +22,6 @@ class PerformanceTableScanTest : public BaseTest {
     _random_table_large = std::make_shared<Table>(_entries_large / 10);
     _sorted_table_large = std::make_shared<Table>(_entries_large / 10);
 
-    StorageManager::get().add_table("randomSmall", _random_table_small);
-    StorageManager::get().add_table("sortedSmall", _sorted_table_small);
-    StorageManager::get().add_table("randomMedium", _random_table_medium);
-    StorageManager::get().add_table("sortedMedium", _sorted_table_medium);
-    StorageManager::get().add_table("randomLarge", _random_table_large);
-    StorageManager::get().add_table("sortedLarge", _sorted_table_large);
-
     _fill_with_sorted_values(_sorted_table_small, _entries_small);
     _fill_with_sorted_values(_sorted_table_medium, _entries_medium);
     _fill_with_sorted_values(_sorted_table_large, _entries_large);
@@ -49,6 +42,17 @@ class PerformanceTableScanTest : public BaseTest {
     }
 
     // ToDo arthur: destroy tables held by static pointers
+  }
+
+  void SetUp() override {
+    // BaseTest destructor automatically calls StorageManager::reset()
+    // so we have to re-initialize the StorageManager for every test
+    StorageManager::get().add_table("randomSmall", _random_table_small);
+    StorageManager::get().add_table("sortedSmall", _sorted_table_small);
+    StorageManager::get().add_table("randomMedium", _random_table_medium);
+    StorageManager::get().add_table("sortedMedium", _sorted_table_medium);
+    StorageManager::get().add_table("randomLarge", _random_table_large);
+    StorageManager::get().add_table("sortedLarge", _sorted_table_large);
   }
 
   // Simulates duplicate and sorted values. Fills the table with one column of unsigned integers,
