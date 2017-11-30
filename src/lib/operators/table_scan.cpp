@@ -13,6 +13,117 @@
 namespace opossum {
 
 template <typename T>
+struct IdentityGetter {
+    const T& operator()(const T & element) {
+        return element;
+    }
+};
+
+template <typename T>
+struct ReferenceGetter {
+    explicit ReferenceGetter(const Table & table, ColumnID column_id) : _table{table}, _column_id{column_id} {}
+    const T& operator()(const RowID & row_id) {
+        if (_last_chunk_id != row_id.chunk_id)
+        {
+            const Chunk& chunk = _table.get_chunk(row_id.chunk_id);
+            const auto & column_ptr = chunk.get_column(_column_id);
+
+            _last_value_ptr = std::dynamic_pointer_cast<ValueColumn<T>>(column_ptr);
+            _last_dictionary_ptr = std::dynamic_pointer_cast<DictionaryColumn<T>>(column_ptr);
+            _last_chunk_id = row_id.chunk_id;
+        }
+
+        if (_last_value_ptr) {
+            return _get_from_value_column(_last_value_ptr, row_id.chunk_offset);
+        }
+
+        if (_last_dictionary_ptr) {
+            return _get_from_dictionary_column(_last_dictionary_ptr, row_id.chunk_offset);
+        }
+
+        throw std::runtime_error("Unknown referenced column type");
+    }
+protected:
+    const T& _get_from_value_column(std::shared_ptr<ValueColumn<T>> value_column, ChunkOffset chunk_offset) {
+        return value_column->values()[chunk_offset];
+    }
+
+    const T& _get_from_dictionary_column(std::shared_ptr<DictionaryColumn<T>> dictionary_column, ChunkOffset chunk_offset) {
+        // TODO FIXME this is slow
+        return dictionary_column->get(chunk_offset);
+    }
+
+    const Table& _table;
+    const ColumnID _column_id;
+
+    mutable ChunkID _last_chunk_id;
+    mutable std::shared_ptr<ValueColumn<T>> _last_value_ptr;
+    mutable std::shared_ptr<DictionaryColumn<T>> _last_dictionary_ptr;
+};
+
+//struct RowIDEmitter {
+//    explicit RowIDEmitter(PosList & pos_list) : _pos_list{pos_list} {}
+//    void operator()(ChunkOffset offset, RowID original_value, ){}
+//    protected:
+//        PosList & _pos_list;
+//};
+
+//struct OffsetEmitter {
+
+//}
+
+
+
+template <typename T, typename CompType, typename Getter>
+void vector_scan_impl(const std::vector<T> & values, const Getter & getter, const T& compare_value, PosList & pos_list, ChunkID chunk_id) {
+    CompType comparator;
+    for (ChunkOffset chunk_offset{0}; chunk_offset < values.size(); ++chunk_offset) {
+      const auto& value = getter(values[chunk_offset]);
+      if (comparator(value, compare_value)) {
+            pos_list.emplace_back(RowID{chunk_id, chunk_offset});
+        }
+    }
+}
+
+template <typename T, typename CompType, typename Getter>
+void vector_scan_impl(const std::vector<RowID> & values, const T& compare_value, PosList & pos_list, ChunkID chunk_id) {
+    CompType comparator;
+    for (const RowID & row_id : values) {
+      const auto& value = getter(row_id);
+      if (comparator(value, compare_value)) {
+            pos_list.emplace_back(row_id);
+        }
+    }
+}
+
+
+template <typename T>
+void vector_scan(const std::vector<T> & values, const T& compare_value, PosList & pos_list, ChunkID chunk_id, ScanType scan_type) {
+    switch (scan_type) {
+      case ScanType::OpEquals:
+        vector_scan_impl<T, std::equal_to<T>>(values, compare_value, pos_list, chunk_id);
+        break;
+      case ScanType::OpNotEquals:
+        vector_scan_impl<T, std::not_equal_to<T>>(values, compare_value, pos_list, chunk_id);
+        break;
+      case ScanType::OpLessThan:
+        vector_scan_impl<T, std::less<T>>(values, compare_value, pos_list, chunk_id);
+        break;
+      case ScanType::OpLessThanEquals:
+        vector_scan_impl<T, std::less_equal<T>>(values, compare_value, pos_list, chunk_id);
+        break;
+      case ScanType::OpGreaterThan:
+        vector_scan_impl<T, std::greater<T>>(values, compare_value, pos_list, chunk_id);
+        break;
+      case ScanType::OpGreaterThanEquals:
+        vector_scan_impl<T, std::greater_equal<T>>(values, compare_value, pos_list, chunk_id);
+        break;
+      default:
+        throw std::runtime_error("Operator not known");
+    }
+}
+
+template <typename T>
 bool compare(const T& lhs, const T& rhs, ScanType scan_type) {
   switch (scan_type) {
     case ScanType::OpEquals:
@@ -91,12 +202,13 @@ class TypedTableScanImpl : public BaseTableScanImpl {
 
   void _process_value_column(ChunkID chunk_id, std::shared_ptr<ValueColumn<T>> column) {
     const auto& values = column->values();
-    for (ChunkOffset chunk_offset{0}; chunk_offset < column->size(); ++chunk_offset) {
-      const auto& value = values[chunk_offset];
-      if (compare(value, _search_value, _scan_type)) {
-        _pos_list->emplace_back(RowID{chunk_id, chunk_offset});
-      }
-    }
+    vector_scan(values, _search_value, *_pos_list, chunk_id, _scan_type);
+//    for (ChunkOffset chunk_offset{0}; chunk_offset < column->size(); ++chunk_offset) {
+//      const auto& value = values[chunk_offset];
+//      if (compare(value, _search_value, _scan_type)) {
+//        _pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+//      }
+//    }
   }
 
   void _process_dictionary_column(ChunkID chunk_id, std::shared_ptr<DictionaryColumn<T>> column) {

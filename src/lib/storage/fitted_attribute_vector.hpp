@@ -16,13 +16,13 @@ class FittedAttributeVector : public BaseAttributeVector {
  public:
   explicit FittedAttributeVector(size_t number_of_entries) : _values(number_of_entries) {}
 
-  ValueID get(const size_t i) const override { return ValueID{_values.at(i)}; };
+  ValueID get(const size_t i) const override { return ValueID{_values.at(i)}; }
 
-  void set(const size_t i, const ValueID value_id) override { _values.at(i) = value_id; };
+  void set(const size_t i, const ValueID value_id) override { _values.at(i) = value_id; }
 
-  size_t size() const override { return _values.size(); };
+  size_t size() const override { return _values.size(); }
 
-  AttributeVectorWidth width() const override { return sizeof(T); };
+  AttributeVectorWidth width() const override { return sizeof(T); }
 
  protected:
   std::vector<T> _values;
