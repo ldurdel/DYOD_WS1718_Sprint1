@@ -24,6 +24,8 @@ class FittedAttributeVector : public BaseAttributeVector {
 
   AttributeVectorWidth width() const override { return sizeof(T); }
 
+  const std::vector<T> & values() { return _values; }
+
  protected:
   std::vector<T> _values;
 };

@@ -7,6 +7,7 @@
 
 #include "storage/base_column.hpp"
 #include "storage/dictionary_column.hpp"
+#include "storage/fitted_attribute_vector.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 
@@ -61,20 +62,7 @@ protected:
     mutable std::shared_ptr<DictionaryColumn<T>> _last_dictionary_ptr;
 };
 
-//struct RowIDEmitter {
-//    explicit RowIDEmitter(PosList & pos_list) : _pos_list{pos_list} {}
-//    void operator()(ChunkOffset offset, RowID original_value, ){}
-//    protected:
-//        PosList & _pos_list;
-//};
-
-//struct OffsetEmitter {
-
-//}
-
-
-
-template <typename T, typename CompType, typename Getter>
+template <typename T, typename Getter, typename CompType>
 void vector_scan_impl(const std::vector<T> & values, const Getter & getter, const T& compare_value, PosList & pos_list, ChunkID chunk_id) {
     CompType comparator;
     for (ChunkOffset chunk_offset{0}; chunk_offset < values.size(); ++chunk_offset) {
@@ -85,8 +73,8 @@ void vector_scan_impl(const std::vector<T> & values, const Getter & getter, cons
     }
 }
 
-template <typename T, typename CompType, typename Getter>
-void vector_scan_impl(const std::vector<RowID> & values, const T& compare_value, PosList & pos_list, ChunkID chunk_id) {
+template <typename T, typename Getter, typename CompType>
+void vector_scan_impl(const std::vector<RowID> & values, const Getter & getter, const T& compare_value, PosList & pos_list, ChunkID chunk_id) {
     CompType comparator;
     for (const RowID & row_id : values) {
       const auto& value = getter(row_id);
@@ -96,57 +84,30 @@ void vector_scan_impl(const std::vector<RowID> & values, const T& compare_value,
     }
 }
 
-
-template <typename T>
-void vector_scan(const std::vector<T> & values, const T& compare_value, PosList & pos_list, ChunkID chunk_id, ScanType scan_type) {
+template <typename T, typename Getter>
+void vector_scan(const std::vector<T> & values, const Getter & getter, const T& compare_value, PosList & pos_list, ChunkID chunk_id, ScanType scan_type) {
     switch (scan_type) {
       case ScanType::OpEquals:
-        vector_scan_impl<T, std::equal_to<T>>(values, compare_value, pos_list, chunk_id);
+        vector_scan_impl<T, Getter, std::equal_to<T>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpNotEquals:
-        vector_scan_impl<T, std::not_equal_to<T>>(values, compare_value, pos_list, chunk_id);
+        vector_scan_impl<T, Getter, std::not_equal_to<T>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpLessThan:
-        vector_scan_impl<T, std::less<T>>(values, compare_value, pos_list, chunk_id);
+        vector_scan_impl<T, Getter, std::less<T>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpLessThanEquals:
-        vector_scan_impl<T, std::less_equal<T>>(values, compare_value, pos_list, chunk_id);
+        vector_scan_impl<T, Getter, std::less_equal<T>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpGreaterThan:
-        vector_scan_impl<T, std::greater<T>>(values, compare_value, pos_list, chunk_id);
+        vector_scan_impl<T, Getter, std::greater<T>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpGreaterThanEquals:
-        vector_scan_impl<T, std::greater_equal<T>>(values, compare_value, pos_list, chunk_id);
+        vector_scan_impl<T, Getter, std::greater_equal<T>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       default:
         throw std::runtime_error("Operator not known");
     }
-}
-
-template <typename T>
-bool compare(const T& lhs, const T& rhs, ScanType scan_type) {
-  switch (scan_type) {
-    case ScanType::OpEquals:
-      return lhs == rhs;
-      break;
-    case ScanType::OpNotEquals:
-      return lhs != rhs;
-      break;
-    case ScanType::OpLessThan:
-      return lhs < rhs;
-      break;
-    case ScanType::OpLessThanEquals:
-      return lhs <= rhs;
-      break;
-    case ScanType::OpGreaterThan:
-      return lhs > rhs;
-      break;
-    case ScanType::OpGreaterThanEquals:
-      return lhs >= rhs;
-      break;
-    default:
-      throw std::runtime_error("Operator not known");
-  }
 }
 
 class BaseTableScanImpl {
@@ -181,6 +142,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
   }
 
  protected:
+
   void _process_column(ChunkID chunk_id, std::shared_ptr<BaseColumn> column) {
     auto value_column_ptr = std::dynamic_pointer_cast<ValueColumn<T>>(column);
     if (value_column_ptr) {
@@ -202,13 +164,8 @@ class TypedTableScanImpl : public BaseTableScanImpl {
 
   void _process_value_column(ChunkID chunk_id, std::shared_ptr<ValueColumn<T>> column) {
     const auto& values = column->values();
-    vector_scan(values, _search_value, *_pos_list, chunk_id, _scan_type);
-//    for (ChunkOffset chunk_offset{0}; chunk_offset < column->size(); ++chunk_offset) {
-//      const auto& value = values[chunk_offset];
-//      if (compare(value, _search_value, _scan_type)) {
-//        _pos_list->emplace_back(RowID{chunk_id, chunk_offset});
-//      }
-//    }
+    IdentityGetter<T> identity_getter;
+    vector_scan(values, identity_getter, _search_value, *_pos_list, chunk_id, _scan_type);
   }
 
   void _process_dictionary_column(ChunkID chunk_id, std::shared_ptr<DictionaryColumn<T>> column) {
@@ -277,44 +234,36 @@ class TypedTableScanImpl : public BaseTableScanImpl {
       }
     }
 
-    for (ChunkOffset chunk_offset{0}; chunk_offset < column->size(); ++chunk_offset) {
-      const auto& value = value_ids->get(chunk_offset);
-      if (compare(value, comp_value_id, dictionary_scan_type)) {
-        _pos_list->emplace_back(RowID{chunk_id, chunk_offset});
-      }
+    switch(column->attribute_vector()->width()) {
+    case 1:
+    {
+        IdentityGetter<uint8_t> identity_getter;
+        auto attribute_vector_ptr = std::dynamic_pointer_cast<FittedAttributeVector<uint8_t>>(column->attribute_vector());
+        vector_scan(attribute_vector_ptr->values(), identity_getter, comp_value_id, _pos_list, chunk_id, dictionary_scan_type);
+        break;
+     }
+    case 2:
+    {
+        IdentityGetter<uint16_t> identity_getter;
+        auto attribute_vector_ptr = std::dynamic_pointer_cast<FittedAttributeVector<uint16_t>>(column->attribute_vector());
+        vector_scan(attribute_vector_ptr->values(), identity_getter, comp_value_id, _pos_list, chunk_id, dictionary_scan_type);
+        break;
+     }
+    case 4:
+    {
+        IdentityGetter<uint32_t> identity_getter;
+        auto attribute_vector_ptr = std::dynamic_pointer_cast<FittedAttributeVector<uint32_t>>(column->attribute_vector());
+        vector_scan(attribute_vector_ptr->values(), identity_getter, comp_value_id, _pos_list, chunk_id, dictionary_scan_type);
+        break;
+     }
+    default:
+        throw std::runtime_error("Unknown underlying type for attribute vector");
     }
   }
 
   void _process_reference_column(ChunkID chunk_id, std::shared_ptr<ReferenceColumn> column) {
-    auto table = column->referenced_table();
-
-    for (const auto& row_id : *column->pos_list()) {
-      const auto& chunk = table->get_chunk(row_id.chunk_id);
-      auto referenced_column_ptr = chunk.get_column(column->referenced_column_id());
-
-      auto value_column_ptr = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column_ptr);
-      if (value_column_ptr) {
-        const auto& value = value_column_ptr->values()[row_id.chunk_offset];
-        if (compare(value, _search_value, _scan_type)) {
-          _pos_list->emplace_back(row_id);
-        }
-
-        continue;
-      }
-
-      auto dictionary_column_ptr = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column_ptr);
-      if (dictionary_column_ptr) {
-        const auto& value_id = dictionary_column_ptr->attribute_vector()->get(row_id.chunk_offset);
-        const auto& value = (*dictionary_column_ptr->dictionary())[value_id];
-        if (compare(value, _search_value, _scan_type)) {
-          _pos_list->emplace_back(row_id);
-        }
-
-        continue;
-      }
-
-      throw std::runtime_error("Unknown referenced column type");
-    }
+    ReferenceGetter<T> reference_getter{*column->referenced_table(), column->referenced_column_id()};
+    vector_scan(*column->pos_list(), reference_getter, _search_value, _pos_list, chunk_id, _scan_type);
   }
 
   std::shared_ptr<PosList> _pos_list;
