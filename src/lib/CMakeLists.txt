@@ -12,6 +12,7 @@ set(
     operators/table_scan/table_scan.cpp
     operators/table_scan/table_scan.hpp
     operators/table_scan/table_scan_impl.hpp
+    operators/table_scan/value_getter.hpp
     operators/table_scan/vector_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
