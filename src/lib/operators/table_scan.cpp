@@ -15,15 +15,23 @@ namespace opossum {
 
 template <typename T>
 struct IdentityGetter {
-    const T& operator()(const T & element) {
+    const T& operator()(const T & element) const {
         return element;
     }
 };
 
 template <typename T>
 struct ReferenceGetter {
-    explicit ReferenceGetter(const Table & table, ColumnID column_id) : _table{table}, _column_id{column_id} {}
-    const T& operator()(const RowID & row_id) {
+    explicit ReferenceGetter(const Table & table, ColumnID column_id)
+        : _table{table}
+        , _column_id{column_id}
+        // TODO is there an INVALID_CHUNK_ID?!
+        // TODO otherwise add like a bool or something
+        , _last_chunk_id{std::numeric_limits<ChunkID::base_type>::max()}
+        , _last_value_ptr{nullptr}
+        , _last_dictionary_ptr{nullptr}
+    {}
+    const T& operator()(const RowID & row_id) const {
         if (_last_chunk_id != row_id.chunk_id)
         {
             const Chunk& chunk = _table.get_chunk(row_id.chunk_id);
@@ -45,11 +53,11 @@ struct ReferenceGetter {
         throw std::runtime_error("Unknown referenced column type");
     }
 protected:
-    const T& _get_from_value_column(std::shared_ptr<ValueColumn<T>> value_column, ChunkOffset chunk_offset) {
+    const T& _get_from_value_column(std::shared_ptr<ValueColumn<T>> value_column, ChunkOffset chunk_offset) const {
         return value_column->values()[chunk_offset];
     }
 
-    const T& _get_from_dictionary_column(std::shared_ptr<DictionaryColumn<T>> dictionary_column, ChunkOffset chunk_offset) {
+    const T& _get_from_dictionary_column(std::shared_ptr<DictionaryColumn<T>> dictionary_column, ChunkOffset chunk_offset) const {
         // TODO FIXME this is slow
         return dictionary_column->get(chunk_offset);
     }
@@ -84,26 +92,26 @@ void vector_scan_impl(const std::vector<RowID> & values, const Getter & getter, 
     }
 }
 
-template <typename T, typename Getter>
-void vector_scan(const std::vector<T> & values, const Getter & getter, const T& compare_value, PosList & pos_list, ChunkID chunk_id, ScanType scan_type) {
+template <typename VectorT, typename CompareT, typename Getter>
+void vector_scan(const std::vector<VectorT> & values, const Getter & getter, const CompareT& compare_value, PosList & pos_list, ChunkID chunk_id, ScanType scan_type) {
     switch (scan_type) {
       case ScanType::OpEquals:
-        vector_scan_impl<T, Getter, std::equal_to<T>>(values, getter, compare_value, pos_list, chunk_id);
+        vector_scan_impl<CompareT, Getter, std::equal_to<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpNotEquals:
-        vector_scan_impl<T, Getter, std::not_equal_to<T>>(values, getter, compare_value, pos_list, chunk_id);
+        vector_scan_impl<CompareT, Getter, std::not_equal_to<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpLessThan:
-        vector_scan_impl<T, Getter, std::less<T>>(values, getter, compare_value, pos_list, chunk_id);
+        vector_scan_impl<CompareT, Getter, std::less<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpLessThanEquals:
-        vector_scan_impl<T, Getter, std::less_equal<T>>(values, getter, compare_value, pos_list, chunk_id);
+        vector_scan_impl<CompareT, Getter, std::less_equal<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpGreaterThan:
-        vector_scan_impl<T, Getter, std::greater<T>>(values, getter, compare_value, pos_list, chunk_id);
+        vector_scan_impl<CompareT, Getter, std::greater<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       case ScanType::OpGreaterThanEquals:
-        vector_scan_impl<T, Getter, std::greater_equal<T>>(values, getter, compare_value, pos_list, chunk_id);
+        vector_scan_impl<CompareT, Getter, std::greater_equal<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
         break;
       default:
         throw std::runtime_error("Operator not known");
@@ -165,7 +173,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
   void _process_value_column(ChunkID chunk_id, std::shared_ptr<ValueColumn<T>> column) {
     const auto& values = column->values();
     IdentityGetter<T> identity_getter;
-    vector_scan(values, identity_getter, _search_value, *_pos_list, chunk_id, _scan_type);
+    vector_scan<T, T, IdentityGetter<T>>(values, identity_getter, _search_value, *_pos_list, chunk_id, _scan_type);
   }
 
   void _process_dictionary_column(ChunkID chunk_id, std::shared_ptr<DictionaryColumn<T>> column) {
@@ -238,22 +246,25 @@ class TypedTableScanImpl : public BaseTableScanImpl {
     case 1:
     {
         IdentityGetter<uint8_t> identity_getter;
-        auto attribute_vector_ptr = std::dynamic_pointer_cast<FittedAttributeVector<uint8_t>>(column->attribute_vector());
-        vector_scan(attribute_vector_ptr->values(), identity_getter, comp_value_id, _pos_list, chunk_id, dictionary_scan_type);
+        auto fitted_comp_value_id = static_cast<uint8_t>(comp_value_id);
+        auto attribute_vector_ptr = std::dynamic_pointer_cast<const FittedAttributeVector<uint8_t>>(column->attribute_vector());
+        vector_scan<uint8_t, uint8_t, IdentityGetter<uint8_t>>(attribute_vector_ptr->values(), identity_getter, fitted_comp_value_id, *_pos_list, chunk_id, dictionary_scan_type);
         break;
      }
     case 2:
     {
         IdentityGetter<uint16_t> identity_getter;
-        auto attribute_vector_ptr = std::dynamic_pointer_cast<FittedAttributeVector<uint16_t>>(column->attribute_vector());
-        vector_scan(attribute_vector_ptr->values(), identity_getter, comp_value_id, _pos_list, chunk_id, dictionary_scan_type);
+        auto fitted_comp_value_id = static_cast<uint16_t>(comp_value_id);
+        auto attribute_vector_ptr = std::dynamic_pointer_cast<const FittedAttributeVector<uint16_t>>(column->attribute_vector());
+        vector_scan<uint16_t, uint16_t, IdentityGetter<uint16_t>>(attribute_vector_ptr->values(), identity_getter, fitted_comp_value_id, *_pos_list, chunk_id, dictionary_scan_type);
         break;
      }
     case 4:
     {
         IdentityGetter<uint32_t> identity_getter;
-        auto attribute_vector_ptr = std::dynamic_pointer_cast<FittedAttributeVector<uint32_t>>(column->attribute_vector());
-        vector_scan(attribute_vector_ptr->values(), identity_getter, comp_value_id, _pos_list, chunk_id, dictionary_scan_type);
+        auto fitted_comp_value_id = static_cast<uint32_t>(comp_value_id);
+        auto attribute_vector_ptr = std::dynamic_pointer_cast<const FittedAttributeVector<uint32_t>>(column->attribute_vector());
+        vector_scan<uint32_t, uint32_t, IdentityGetter<uint32_t>>(attribute_vector_ptr->values(), identity_getter, fitted_comp_value_id, *_pos_list, chunk_id, dictionary_scan_type);
         break;
      }
     default:
@@ -263,7 +274,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
 
   void _process_reference_column(ChunkID chunk_id, std::shared_ptr<ReferenceColumn> column) {
     ReferenceGetter<T> reference_getter{*column->referenced_table(), column->referenced_column_id()};
-    vector_scan(*column->pos_list(), reference_getter, _search_value, _pos_list, chunk_id, _scan_type);
+    vector_scan<RowID, T, ReferenceGetter<T>>(*column->pos_list(), reference_getter, _search_value, *_pos_list, chunk_id, _scan_type);
   }
 
   std::shared_ptr<PosList> _pos_list;
