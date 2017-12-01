@@ -7,9 +7,10 @@
 
 namespace opossum {
 
-template <typename T, typename Getter, typename CompType>
-void vector_scan_impl(const std::vector<T>& values, const Getter& getter, const T& compare_value, PosList& pos_list,
-                      ChunkID chunk_id) {
+// Generic vector scan implementation that stores offsets of matching values.
+template <typename T, typename ValueGetterT, typename CompType>
+void vector_scan_impl(const std::vector<T>& values, const ValueGetterT& getter, const T& compare_value,
+                      PosList& pos_list, ChunkID chunk_id) {
   CompType comparator;
   for (ChunkOffset chunk_offset{0}; chunk_offset < values.size(); ++chunk_offset) {
     const auto& value = getter(values[chunk_offset]);
@@ -19,9 +20,11 @@ void vector_scan_impl(const std::vector<T>& values, const Getter& getter, const 
   }
 }
 
-template <typename T, typename Getter, typename CompType>
-void vector_scan_impl(const std::vector<RowID>& values, const Getter& getter, const T& compare_value, PosList& pos_list,
-                      ChunkID chunk_id) {
+// PosList-specific vector scan implementation that stores matching RowIDs directly
+// instead of their offsets.
+template <typename T, typename ValueGetterT, typename CompType>
+void vector_scan_impl(const std::vector<RowID>& values, const ValueGetterT& getter, const T& compare_value,
+                      PosList& pos_list, ChunkID chunk_id) {
   CompType comparator;
   for (const RowID& row_id : values) {
     const auto& value = getter(row_id);
@@ -31,30 +34,37 @@ void vector_scan_impl(const std::vector<RowID>& values, const Getter& getter, co
   }
 }
 
-template <typename VectorT, typename CompareT, typename Getter>
-void vector_scan(const std::vector<VectorT>& values, const Getter& getter, const CompareT& compare_value,
+// Performs a scan on a std::vector based on a compare_value and a scan_type.
+// The resulting (matching) offsets are stored with the given chunk_id in the pos_list.
+// Values are retrieved from the vector using the provided ValueGetter.
+template <typename VectorT, typename CompareT, typename ValueGetterT>
+void vector_scan(const std::vector<VectorT>& values, const ValueGetterT& getter, const CompareT& compare_value,
                  PosList& pos_list, ChunkID chunk_id, ScanType scan_type) {
   switch (scan_type) {
     case ScanType::OpEquals:
-      vector_scan_impl<CompareT, Getter, std::equal_to<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
+      vector_scan_impl<CompareT, ValueGetterT, std::equal_to<CompareT>>(values, getter, compare_value, pos_list,
+                                                                        chunk_id);
       break;
     case ScanType::OpNotEquals:
-      vector_scan_impl<CompareT, Getter, std::not_equal_to<CompareT>>(values, getter, compare_value, pos_list,
-                                                                      chunk_id);
+      vector_scan_impl<CompareT, ValueGetterT, std::not_equal_to<CompareT>>(values, getter, compare_value, pos_list,
+                                                                            chunk_id);
       break;
     case ScanType::OpLessThan:
-      vector_scan_impl<CompareT, Getter, std::less<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
+      vector_scan_impl<CompareT, ValueGetterT, std::less<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
       break;
     case ScanType::OpLessThanEquals:
-      vector_scan_impl<CompareT, Getter, std::less_equal<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
+      vector_scan_impl<CompareT, ValueGetterT, std::less_equal<CompareT>>(values, getter, compare_value, pos_list,
+                                                                          chunk_id);
       break;
     case ScanType::OpGreaterThan:
-      vector_scan_impl<CompareT, Getter, std::greater<CompareT>>(values, getter, compare_value, pos_list, chunk_id);
-      break;
-    case ScanType::OpGreaterThanEquals:
-      vector_scan_impl<CompareT, Getter, std::greater_equal<CompareT>>(values, getter, compare_value, pos_list,
+      vector_scan_impl<CompareT, ValueGetterT, std::greater<CompareT>>(values, getter, compare_value, pos_list,
                                                                        chunk_id);
       break;
+    case ScanType::OpGreaterThanEquals:
+      vector_scan_impl<CompareT, ValueGetterT, std::greater_equal<CompareT>>(values, getter, compare_value, pos_list,
+                                                                             chunk_id);
+      break;
+    // TODO add "ScanType::OpAll" and "ScanType::OpNone"
     default:
       throw std::runtime_error("Operator not known");
   }

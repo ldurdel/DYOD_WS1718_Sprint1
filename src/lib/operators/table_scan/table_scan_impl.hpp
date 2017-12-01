@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "storage/base_attribute_vector.hpp"
@@ -37,7 +38,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
 
     for (ChunkID chunk_id{0}; chunk_id < input_table_ptr->chunk_count(); ++chunk_id) {
       const auto& chunk = input_table_ptr->get_chunk(chunk_id);
-      _process_column(chunk_id, chunk.get_column(_table_scan.column_id()));
+      _scan_column(chunk_id, chunk.get_column(_table_scan.column_id()));
     }
 
     return _pos_list;
@@ -53,108 +54,110 @@ class TypedTableScanImpl : public BaseTableScanImpl {
     vector_scan(attribute_vector_ptr->values(), identity_getter, fitted_comp_value_id, *_pos_list, chunk_id, scan_type);
   }
 
-  void _process_column(ChunkID chunk_id, std::shared_ptr<BaseColumn> column) {
+  // Dispatch column-type specific scan operations
+  void _scan_column(ChunkID chunk_id, std::shared_ptr<BaseColumn> column) {
     auto value_column_ptr = std::dynamic_pointer_cast<ValueColumn<T>>(column);
     if (value_column_ptr) {
-      return _process_value_column(chunk_id, value_column_ptr);
+      return _scan_value_column(chunk_id, value_column_ptr);
     }
 
     auto dictionary_column_ptr = std::dynamic_pointer_cast<DictionaryColumn<T>>(column);
     if (dictionary_column_ptr) {
-      return _process_dictionary_column(chunk_id, dictionary_column_ptr);
+      return _scan_dictionary_column(chunk_id, dictionary_column_ptr);
     }
 
     auto reference_column_ptr = std::dynamic_pointer_cast<ReferenceColumn>(column);
     if (reference_column_ptr) {
-      return _process_reference_column(chunk_id, reference_column_ptr);
+      return _scan_reference_column(chunk_id, reference_column_ptr);
     }
 
     throw std::runtime_error("Unknown column type");
   }
 
-  void _process_value_column(ChunkID chunk_id, std::shared_ptr<ValueColumn<T>> column) {
+  void _scan_value_column(ChunkID chunk_id, std::shared_ptr<ValueColumn<T>> column) {
     const auto& values = column->values();
     IdentityGetter<T> identity_getter;
     vector_scan(values, identity_getter, _search_value, *_pos_list, chunk_id, _scan_type);
   }
 
-  void _process_dictionary_column(ChunkID chunk_id, std::shared_ptr<DictionaryColumn<T>> column) {
-    const auto& value_ids = column->attribute_vector();
+  // Determines scan parameters to be used when scanning a DictionaryColumn by
+  // looking up the compare value in the dictionary.
+  std::pair<ValueID, ScanType> _determine_attribute_vector_scan(std::shared_ptr<DictionaryColumn<T>> column) {
     const auto& lower_bound_value_id = column->lower_bound(_search_value);
-
     auto dictionary_scan_type = _scan_type;
-    auto comp_value_id = lower_bound_value_id;
 
-    // if lower_bound returns INVALID_VALUE_ID, either return all values or no value at all
+    // If lower_bound returns INVALID_VALUE_ID, no value in the dictionary is >= comp_value
+    // => Either return all values or no value at all
     if (lower_bound_value_id == INVALID_VALUE_ID) {
       switch (dictionary_scan_type) {
         case ScanType::OpEquals:
         case ScanType::OpGreaterThan:
         case ScanType::OpGreaterThanEquals:
-          // Early exit
-          return;
-          break;
+          // TODO use ScanType::OpNone
+          return std::make_pair(INVALID_VALUE_ID, ScanType::OpEquals);
         case ScanType::OpLessThan:
         case ScanType::OpLessThanEquals:
         case ScanType::OpNotEquals:
-          // Return all
-          dictionary_scan_type = ScanType::OpNotEquals;
-          comp_value_id = INVALID_VALUE_ID;
-          break;
-        default:
-          throw std::runtime_error("unknown scan type");
-          break;
-      }
-    } else {
-      // lower_bound returned an existing value
-      auto lower_bound_equals_search_value = column->value_by_value_id(lower_bound_value_id) == _search_value;
-      comp_value_id = lower_bound_value_id;
-
-      // If value ID returned by lower_bound does not correspond to original search value, we need to modify our search value and / or operator
-      switch (dictionary_scan_type) {
-        case ScanType::OpEquals:
-          if (!lower_bound_equals_search_value) {
-            // Value does not exist in chunk -- early exit
-            return;
-          }
-          break;
-        case ScanType::OpGreaterThan:
-          if (!lower_bound_equals_search_value) {
-            dictionary_scan_type = ScanType::OpGreaterThanEquals;
-          }
-          break;
-        case ScanType::OpGreaterThanEquals:
-          break;
-        case ScanType::OpLessThan:
-          break;
-        case ScanType::OpLessThanEquals:
-          if (!lower_bound_equals_search_value) {
-            dictionary_scan_type = ScanType::OpLessThan;
-          }
-          break;
-        case ScanType::OpNotEquals:
-          if (!lower_bound_equals_search_value) {
-            // Simply dump all values from this chunk
-            comp_value_id = INVALID_VALUE_ID;
-          }
-          break;
+          // TODO use ScanType::OpAll
+          return std::make_pair(INVALID_VALUE_ID, ScanType::OpNotEquals);
         default:
           throw std::runtime_error("unknown scan type");
           break;
       }
     }
 
+    // lower_bound returned an existing value
+    // "new" comparison value is value at lower bound
+    auto value_at_lower_bound = column->value_by_value_id(lower_bound_value_id);
+
+    // If value ID returned by lower_bound does not correspond to original search
+    // value, we need to modify our search value and / or operator
+    if (value_at_lower_bound != _search_value) {
+      switch (dictionary_scan_type) {
+        case ScanType::OpEquals:
+          // TODO return all, use ScanType::OpNone
+          return std::make_pair(INVALID_VALUE_ID, ScanType::OpEquals);
+        case ScanType::OpGreaterThan:
+          return std::make_pair(lower_bound_value_id, ScanType::OpGreaterThanEquals);
+        case ScanType::OpGreaterThanEquals:
+          return std::make_pair(lower_bound_value_id, ScanType::OpGreaterThanEquals);
+        case ScanType::OpLessThan:
+          return std::make_pair(lower_bound_value_id, ScanType::OpLessThan);
+        case ScanType::OpLessThanEquals:
+          return std::make_pair(lower_bound_value_id, ScanType::OpLessThan);
+        case ScanType::OpNotEquals:
+          // TODO use ScanType::OpAll
+          return std::make_pair(INVALID_VALUE_ID, ScanType::OpNotEquals);
+        default:
+          throw std::runtime_error("unknown scan type");
+          break;
+      }
+    }
+
+    // ValueID returned by lower_bound does indeed correspond to original search
+    return std::make_pair(lower_bound_value_id, dictionary_scan_type);
+  }
+
+  void _scan_dictionary_column(ChunkID chunk_id, std::shared_ptr<DictionaryColumn<T>> column) {
+    auto scan_parameters = _determine_attribute_vector_scan(column);
+    auto attribute_vector_comp_value = scan_parameters.first;
+    auto attribute_vector_scan_type = scan_parameters.second;
+
+    // A FittedAttributeVector can only be scanned efficiently if its specific underlying type is known
     switch (column->attribute_vector()->width()) {
       case 1: {
-        _scan_attribute_vector<uint8_t>(column->attribute_vector(), comp_value_id, chunk_id, dictionary_scan_type);
+        _scan_attribute_vector<uint8_t>(column->attribute_vector(), attribute_vector_comp_value, chunk_id,
+                                        attribute_vector_scan_type);
         break;
       }
       case 2: {
-        _scan_attribute_vector<uint16_t>(column->attribute_vector(), comp_value_id, chunk_id, dictionary_scan_type);
+        _scan_attribute_vector<uint16_t>(column->attribute_vector(), attribute_vector_comp_value, chunk_id,
+                                         attribute_vector_scan_type);
         break;
       }
       case 4: {
-        _scan_attribute_vector<uint32_t>(column->attribute_vector(), comp_value_id, chunk_id, dictionary_scan_type);
+        _scan_attribute_vector<uint32_t>(column->attribute_vector(), attribute_vector_comp_value, chunk_id,
+                                         attribute_vector_scan_type);
         break;
       }
       default:
@@ -162,7 +165,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
     }
   }
 
-  void _process_reference_column(ChunkID chunk_id, std::shared_ptr<ReferenceColumn> column) {
+  void _scan_reference_column(ChunkID chunk_id, std::shared_ptr<ReferenceColumn> column) {
     ReferenceGetter<T> reference_getter{*column->referenced_table(), column->referenced_column_id()};
     vector_scan(*column->pos_list(), reference_getter, _search_value, *_pos_list, chunk_id, _scan_type);
   }

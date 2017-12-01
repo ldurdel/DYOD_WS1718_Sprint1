@@ -15,6 +15,9 @@ namespace opossum {
 // A ValueGetter is used in a vector_scan to retrieve the actual value from the
 // value/attribute/PosList vector that can then be used to be compared to the
 // compare_value.
+// ValueGetters are inteded to be used as template arguments so their functionality
+// can be injected at compile time. This prevents excessive virtual method calls
+// as would be with an abstract ValueGetter base class using polymorphism.
 
 // An IdentityGetter is completely transparent, it returns the value itself
 // and should be optimized out in the best case.
