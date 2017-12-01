@@ -67,7 +67,7 @@ class DictionaryColumn : public BaseColumn {
   const AllTypeVariant operator[](const size_t i) const override { return AllTypeVariant{get(i)}; }
 
   // return the value at a certain position.
-  const T & get(const size_t i) const { return _dictionary->at(_attribute_vector->get(i)); }
+  const T& get(const size_t i) const { return _dictionary->at(_attribute_vector->get(i)); }
 
   // dictionary columns are immutable
   void append(const AllTypeVariant&) override { throw std::runtime_error("DictionaryColumns are immutable"); };
