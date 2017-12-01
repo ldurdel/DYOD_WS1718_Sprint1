@@ -11,7 +11,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
-#include "operators/table_scan.hpp"
+#include "operators/table_scan/table_scan.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"

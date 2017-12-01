@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/print.hpp"
-#include "operators/table_scan.hpp"
+#include "operators/table_scan/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"

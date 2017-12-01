@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "abstract_operator.hpp"
 #include "all_type_variant.hpp"
+#include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

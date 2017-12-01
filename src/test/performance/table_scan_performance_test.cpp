@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/get_table.hpp"
-#include "operators/table_scan.hpp"
+#include "operators/table_scan/table_scan.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
