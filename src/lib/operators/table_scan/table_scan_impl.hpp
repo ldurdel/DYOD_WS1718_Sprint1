@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include "storage/base_attribute_vector.hpp"
+#include "storage/base_column.hpp"
 #include "table_scan.hpp"
 #include "types.hpp"
 #include "vector_scan.hpp"
@@ -98,6 +100,16 @@ class TypedTableScanImpl : public BaseTableScanImpl {
   }
 
  protected:
+  template <typename FittedT>
+  void _scan_attribute_vector(std::shared_ptr<const BaseAttributeVector> attribute_vector, ValueID compare_value_id,
+                              ChunkID chunk_id, ScanType scan_type) {
+    IdentityGetter<FittedT> identity_getter;
+    auto fitted_comp_value_id = static_cast<FittedT>(compare_value_id);
+    auto attribute_vector_ptr = std::dynamic_pointer_cast<const FittedAttributeVector<FittedT>>(attribute_vector);
+    vector_scan<FittedT, FittedT, IdentityGetter<FittedT>>(attribute_vector_ptr->values(), identity_getter,
+                                                           fitted_comp_value_id, *_pos_list, chunk_id, scan_type);
+  }
+
   void _process_column(ChunkID chunk_id, std::shared_ptr<BaseColumn> column) {
     auto value_column_ptr = std::dynamic_pointer_cast<ValueColumn<T>>(column);
     if (value_column_ptr) {
@@ -191,33 +203,15 @@ class TypedTableScanImpl : public BaseTableScanImpl {
 
     switch (column->attribute_vector()->width()) {
       case 1: {
-        IdentityGetter<uint8_t> identity_getter;
-        auto fitted_comp_value_id = static_cast<uint8_t>(comp_value_id);
-        auto attribute_vector_ptr =
-            std::dynamic_pointer_cast<const FittedAttributeVector<uint8_t>>(column->attribute_vector());
-        vector_scan<uint8_t, uint8_t, IdentityGetter<uint8_t>>(attribute_vector_ptr->values(), identity_getter,
-                                                               fitted_comp_value_id, *_pos_list, chunk_id,
-                                                               dictionary_scan_type);
+        _scan_attribute_vector<uint8_t>(column->attribute_vector(), comp_value_id, chunk_id, dictionary_scan_type);
         break;
       }
       case 2: {
-        IdentityGetter<uint16_t> identity_getter;
-        auto fitted_comp_value_id = static_cast<uint16_t>(comp_value_id);
-        auto attribute_vector_ptr =
-            std::dynamic_pointer_cast<const FittedAttributeVector<uint16_t>>(column->attribute_vector());
-        vector_scan<uint16_t, uint16_t, IdentityGetter<uint16_t>>(attribute_vector_ptr->values(), identity_getter,
-                                                                  fitted_comp_value_id, *_pos_list, chunk_id,
-                                                                  dictionary_scan_type);
+        _scan_attribute_vector<uint16_t>(column->attribute_vector(), comp_value_id, chunk_id, dictionary_scan_type);
         break;
       }
       case 4: {
-        IdentityGetter<uint32_t> identity_getter;
-        auto fitted_comp_value_id = static_cast<uint32_t>(comp_value_id);
-        auto attribute_vector_ptr =
-            std::dynamic_pointer_cast<const FittedAttributeVector<uint32_t>>(column->attribute_vector());
-        vector_scan<uint32_t, uint32_t, IdentityGetter<uint32_t>>(attribute_vector_ptr->values(), identity_getter,
-                                                                  fitted_comp_value_id, *_pos_list, chunk_id,
-                                                                  dictionary_scan_type);
+        _scan_attribute_vector<uint32_t>(column->attribute_vector(), comp_value_id, chunk_id, dictionary_scan_type);
         break;
       }
       default:
