@@ -106,8 +106,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
     IdentityGetter<FittedT> identity_getter;
     auto fitted_comp_value_id = static_cast<FittedT>(compare_value_id);
     auto attribute_vector_ptr = std::dynamic_pointer_cast<const FittedAttributeVector<FittedT>>(attribute_vector);
-    vector_scan<FittedT, FittedT, IdentityGetter<FittedT>>(attribute_vector_ptr->values(), identity_getter,
-                                                           fitted_comp_value_id, *_pos_list, chunk_id, scan_type);
+    vector_scan(attribute_vector_ptr->values(), identity_getter, fitted_comp_value_id, *_pos_list, chunk_id, scan_type);
   }
 
   void _process_column(ChunkID chunk_id, std::shared_ptr<BaseColumn> column) {
@@ -132,7 +131,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
   void _process_value_column(ChunkID chunk_id, std::shared_ptr<ValueColumn<T>> column) {
     const auto& values = column->values();
     IdentityGetter<T> identity_getter;
-    vector_scan<T, T, IdentityGetter<T>>(values, identity_getter, _search_value, *_pos_list, chunk_id, _scan_type);
+    vector_scan(values, identity_getter, _search_value, *_pos_list, chunk_id, _scan_type);
   }
 
   void _process_dictionary_column(ChunkID chunk_id, std::shared_ptr<DictionaryColumn<T>> column) {
@@ -221,8 +220,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
 
   void _process_reference_column(ChunkID chunk_id, std::shared_ptr<ReferenceColumn> column) {
     ReferenceGetter<T> reference_getter{*column->referenced_table(), column->referenced_column_id()};
-    vector_scan<RowID, T, ReferenceGetter<T>>(*column->pos_list(), reference_getter, _search_value, *_pos_list,
-                                              chunk_id, _scan_type);
+    vector_scan(*column->pos_list(), reference_getter, _search_value, *_pos_list, chunk_id, _scan_type);
   }
 
   std::shared_ptr<PosList> _pos_list;
