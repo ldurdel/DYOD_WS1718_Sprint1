@@ -1,6 +1,9 @@
 #include "table_scan.hpp"
 
+#include <functional>
+#include <limits>
 #include <memory>
+#include <vector>
 
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
@@ -22,20 +25,21 @@ template <typename T>
 struct ReferenceGetter {
   explicit ReferenceGetter(const Table& table, ColumnID column_id)
       : _table{table},
-        _column_id{column_id}  // TODO is there an INVALID_CHUNK_ID?!
-        // TODO otherwise add like a bool or something
-        ,
+        _column_id{column_id},
+        _is_last_chunk_valid{false},
         _last_chunk_id{std::numeric_limits<ChunkID::base_type>::max()},
         _last_value_ptr{nullptr},
         _last_dictionary_ptr{nullptr} {}
   const T& operator()(const RowID& row_id) const {
-    if (_last_chunk_id != row_id.chunk_id) {
+    if (! _is_last_chunk_valid || _last_chunk_id != row_id.chunk_id) {
       const Chunk& chunk = _table.get_chunk(row_id.chunk_id);
       const auto& column_ptr = chunk.get_column(_column_id);
 
       _last_value_ptr = std::dynamic_pointer_cast<ValueColumn<T>>(column_ptr);
       _last_dictionary_ptr = std::dynamic_pointer_cast<DictionaryColumn<T>>(column_ptr);
       _last_chunk_id = row_id.chunk_id;
+
+      _is_last_chunk_valid = true; // TODO is there an INVALID_CHUNK_ID?!
     }
 
     if (_last_value_ptr) {
@@ -56,13 +60,14 @@ struct ReferenceGetter {
 
   const T& _get_from_dictionary_column(std::shared_ptr<DictionaryColumn<T>> dictionary_column,
                                        ChunkOffset chunk_offset) const {
-    // TODO FIXME this is slow
+    // TODO anyone: This is slow, but DictionaryColumn does not provide a faster access method
     return dictionary_column->get(chunk_offset);
   }
 
   const Table& _table;
   const ColumnID _column_id;
 
+  mutable bool _is_last_chunk_valid;
   mutable ChunkID _last_chunk_id;
   mutable std::shared_ptr<ValueColumn<T>> _last_value_ptr;
   mutable std::shared_ptr<DictionaryColumn<T>> _last_dictionary_ptr;

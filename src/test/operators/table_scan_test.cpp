@@ -78,12 +78,6 @@ class OperatorsTableScanTest : public BaseTest {
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
-    std::cout << "Expected:\n{";
-    for (auto expected_value : expected) {
-      std::cout << expected_value << ", ";
-    }
-    std::cout << "}, got\n{";
-
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
 
@@ -91,8 +85,6 @@ class OperatorsTableScanTest : public BaseTest {
         const auto& column = *chunk.get_column(column_id);
 
         const auto found_value = column[chunk_offset];
-
-        std::cout << found_value << ", ";
 
         const auto comparator = [found_value](const AllTypeVariant expected_value) {
           // returns equivalency, not equality to simulate std::multiset.
@@ -106,9 +98,6 @@ class OperatorsTableScanTest : public BaseTest {
         expected.erase(search);
       }
     }
-
-    std::cout << "}\n";
-
     ASSERT_EQ(expected.size(), 0u);
   }
 

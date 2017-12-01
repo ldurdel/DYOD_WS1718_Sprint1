@@ -94,9 +94,9 @@ class PerformanceTableScanTest : public BaseTest {
 
   // Defines the number of entries for each type of table.
   // There will be number/10 entries per chunk
-  const static int _entries_small = 10000;
-  const static int _entries_medium = 1000000;
-  const static int _entries_large = 100000000;
+  static const int _entries_small = 10000;
+  static const int _entries_medium = 1000000;
+  static const int _entries_large = 100000000;
 
   static std::shared_ptr<Table> _random_table_small;
   static std::shared_ptr<Table> _sorted_table_small;

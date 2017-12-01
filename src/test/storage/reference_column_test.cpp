@@ -47,8 +47,7 @@ class ReferenceColumnTest : public ::testing::Test {
   }
 
   virtual void TearDown() {
-    // TODO FIXME still relevant?
-    // We had to add the tearDown method to allow multiple test run without failing
+    // This is necessary because we do not allow adding the same table twice
     if (StorageManager::get().has_table("test_table_dict")) {
       StorageManager::get().drop_table("test_table_dict");
     }
