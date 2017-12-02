@@ -41,7 +41,12 @@ class PerformanceTableScanTest : public BaseTest {
       }
     }
 
-    // ToDo arthur: destroy tables held by static pointers
+    _random_table_small.reset();
+    _sorted_table_small.reset();
+    _random_table_medium.reset();
+    _sorted_table_medium.reset();
+    _random_table_large.reset();
+    _sorted_table_large.reset();
   }
 
   void SetUp() override {
