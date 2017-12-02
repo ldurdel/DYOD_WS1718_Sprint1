@@ -34,6 +34,22 @@ void vector_scan_impl(const std::vector<RowID>& values, const ValueGetterT& gett
   }
 }
 
+// Generic method to create a PosList referencing all elements from a vector.
+template <typename T>
+void vector_dump(const std::vector<T>& values, PosList& pos_list, ChunkID chunk_id) {
+  for (ChunkOffset chunk_offset{0}; chunk_offset < values.size(); ++chunk_offset) {
+    pos_list.emplace_back(RowID{chunk_id, chunk_offset});
+  }
+}
+
+// PosList-specific method to create a PosList referencing all elements from a vector.
+template <>
+void vector_dump(const std::vector<RowID>& values, PosList& pos_list, ChunkID chunk_id) {
+  for (const RowID& row_id : values) {
+    pos_list.emplace_back(row_id);
+  }
+}
+
 // Performs a scan on a std::vector based on a compare_value and a scan_type.
 // The resulting (matching) offsets are stored with the given chunk_id in the pos_list.
 // Values are retrieved from the vector using the provided ValueGetter.
@@ -64,7 +80,12 @@ void vector_scan(const std::vector<VectorT>& values, const ValueGetterT& getter,
       vector_scan_impl<CompareT, ValueGetterT, std::greater_equal<CompareT>>(values, getter, compare_value, pos_list,
                                                                              chunk_id);
       break;
-    // TODO add "ScanType::OpAll" and "ScanType::OpNone"
+    case ScanType::OpAll:
+      vector_dump<VectorT>(values, pos_list, chunk_id);
+      break;
+    case ScanType::OpNone:
+      // early exit
+      return;
     default:
       throw std::runtime_error("Operator not known");
   }

@@ -51,7 +51,16 @@ struct RowID {
   }
 };
 
-enum class ScanType { OpEquals, OpNotEquals, OpLessThan, OpLessThanEquals, OpGreaterThan, OpGreaterThanEquals };
+enum class ScanType {
+  OpEquals,
+  OpNotEquals,
+  OpLessThan,
+  OpLessThanEquals,
+  OpGreaterThan,
+  OpGreaterThanEquals,
+  OpAll,
+  OpNone
+};
 
 using PosList = std::vector<RowID>;
 

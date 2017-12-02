@@ -93,13 +93,11 @@ class TypedTableScanImpl : public BaseTableScanImpl {
         case ScanType::OpEquals:
         case ScanType::OpGreaterThan:
         case ScanType::OpGreaterThanEquals:
-          // TODO use ScanType::OpNone
-          return std::make_pair(INVALID_VALUE_ID, ScanType::OpEquals);
+          return std::make_pair(INVALID_VALUE_ID, ScanType::OpNone);
         case ScanType::OpLessThan:
         case ScanType::OpLessThanEquals:
         case ScanType::OpNotEquals:
-          // TODO use ScanType::OpAll
-          return std::make_pair(INVALID_VALUE_ID, ScanType::OpNotEquals);
+          return std::make_pair(INVALID_VALUE_ID, ScanType::OpAll);
         default:
           throw std::runtime_error("unknown scan type");
           break;
@@ -115,8 +113,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
     if (value_at_lower_bound != _search_value) {
       switch (dictionary_scan_type) {
         case ScanType::OpEquals:
-          // TODO return all, use ScanType::OpNone
-          return std::make_pair(INVALID_VALUE_ID, ScanType::OpEquals);
+          return std::make_pair(INVALID_VALUE_ID, ScanType::OpNone);
         case ScanType::OpGreaterThan:
           return std::make_pair(lower_bound_value_id, ScanType::OpGreaterThanEquals);
         case ScanType::OpGreaterThanEquals:
@@ -126,8 +123,7 @@ class TypedTableScanImpl : public BaseTableScanImpl {
         case ScanType::OpLessThanEquals:
           return std::make_pair(lower_bound_value_id, ScanType::OpLessThan);
         case ScanType::OpNotEquals:
-          // TODO use ScanType::OpAll
-          return std::make_pair(INVALID_VALUE_ID, ScanType::OpNotEquals);
+          return std::make_pair(INVALID_VALUE_ID, ScanType::OpAll);
         default:
           throw std::runtime_error("unknown scan type");
           break;
