@@ -96,4 +96,15 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
 }
 
+TEST_F(OperatorsPrintTest, StaticEmptyTable) {
+  Print::print(t, output);
+  auto output_str = output.str();
+  // rather hard-coded tests
+  EXPECT_TRUE(output_str.find("col_1") != std::string::npos);
+  EXPECT_TRUE(output_str.find("col_2") != std::string::npos);
+  EXPECT_TRUE(output_str.find("int") != std::string::npos);
+  EXPECT_TRUE(output_str.find("string") != std::string::npos);
+  EXPECT_TRUE(output_str.find("Empty chunk.") != std::string::npos);
+}
+
 }  // namespace opossum

@@ -43,6 +43,8 @@ void vector_dump(const std::vector<T>& values, PosList& pos_list, ChunkID chunk_
 }
 
 // PosList-specific method to create a PosList referencing all elements from a vector.
+// For some reason, this method is listed as not covered by test cases, but e.g.
+// the ScanOnReferencedDictColumn test calls it (verified by breakpoint)
 template <>
 void vector_dump(const std::vector<RowID>& values, PosList& pos_list, ChunkID chunk_id) {
   for (const RowID& row_id : values) {

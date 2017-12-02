@@ -83,6 +83,16 @@ class TypedTableScanImpl : public BaseTableScanImpl {
   // Determines scan parameters to be used when scanning a DictionaryColumn by
   // looking up the compare value in the dictionary.
   std::pair<ValueID, ScanType> _determine_attribute_vector_scan(std::shared_ptr<DictionaryColumn<T>> column) {
+    // Early exit for trivial cases
+    if (_scan_type == ScanType::OpAll)
+    {
+        return std::make_pair(INVALID_VALUE_ID, ScanType::OpAll);
+    }
+    if (_scan_type == ScanType::OpNone)
+    {
+        return std::make_pair(INVALID_VALUE_ID, ScanType::OpNone);
+    }
+
     const auto& lower_bound_value_id = column->lower_bound(_search_value);
     auto dictionary_scan_type = _scan_type;
 
@@ -93,12 +103,10 @@ class TypedTableScanImpl : public BaseTableScanImpl {
         case ScanType::OpEquals:
         case ScanType::OpGreaterThan:
         case ScanType::OpGreaterThanEquals:
-        case ScanType::OpNone:
           return std::make_pair(INVALID_VALUE_ID, ScanType::OpNone);
         case ScanType::OpLessThan:
         case ScanType::OpLessThanEquals:
         case ScanType::OpNotEquals:
-        case ScanType::OpAll:
           return std::make_pair(INVALID_VALUE_ID, ScanType::OpAll);
         default:
           throw std::runtime_error("unknown scan type");
@@ -115,7 +123,6 @@ class TypedTableScanImpl : public BaseTableScanImpl {
     if (value_at_lower_bound != _search_value) {
       switch (dictionary_scan_type) {
         case ScanType::OpEquals:
-        case ScanType::OpNone:
           return std::make_pair(INVALID_VALUE_ID, ScanType::OpNone);
         case ScanType::OpGreaterThan:
         case ScanType::OpGreaterThanEquals:
@@ -124,7 +131,6 @@ class TypedTableScanImpl : public BaseTableScanImpl {
         case ScanType::OpLessThanEquals:
           return std::make_pair(lower_bound_value_id, ScanType::OpLessThan);
         case ScanType::OpNotEquals:
-        case ScanType::OpAll:
           return std::make_pair(INVALID_VALUE_ID, ScanType::OpAll);
         default:
           throw std::runtime_error("unknown scan type");
