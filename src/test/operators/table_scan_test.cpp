@@ -66,9 +66,8 @@ class OperatorsTableScanTest : public BaseTest {
       table->append({i, 100.0f + i});
     }
 
-    // TODO FIXME OHAI I just adapted the test case
+    // Create a new chunk to make sure that the last chunk is always uncompressed
     table->create_new_chunk();
-
     table->compress_chunk(ChunkID(0));
 
     auto table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(table));

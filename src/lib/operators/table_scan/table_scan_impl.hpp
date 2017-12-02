@@ -84,13 +84,11 @@ class TypedTableScanImpl : public BaseTableScanImpl {
   // looking up the compare value in the dictionary.
   std::pair<ValueID, ScanType> _determine_attribute_vector_scan(std::shared_ptr<DictionaryColumn<T>> column) {
     // Early exit for trivial cases
-    if (_scan_type == ScanType::OpAll)
-    {
-        return std::make_pair(INVALID_VALUE_ID, ScanType::OpAll);
+    if (_scan_type == ScanType::OpAll) {
+      return std::make_pair(INVALID_VALUE_ID, ScanType::OpAll);
     }
-    if (_scan_type == ScanType::OpNone)
-    {
-        return std::make_pair(INVALID_VALUE_ID, ScanType::OpNone);
+    if (_scan_type == ScanType::OpNone) {
+      return std::make_pair(INVALID_VALUE_ID, ScanType::OpNone);
     }
 
     const auto& lower_bound_value_id = column->lower_bound(_search_value);

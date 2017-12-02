@@ -55,7 +55,7 @@ class ReferenceGetter {
       _last_dictionary_ptr = std::dynamic_pointer_cast<DictionaryColumn<T>>(column_ptr);
       _last_chunk_id = row_id.chunk_id;
 
-      _is_last_chunk_valid = true;  // TODO is there an INVALID_CHUNK_ID?!
+      _is_last_chunk_valid = true;
     }
 
     if (_last_value_ptr) {
@@ -76,7 +76,10 @@ class ReferenceGetter {
 
   const T& _get_from_dictionary_column(std::shared_ptr<DictionaryColumn<T>> dictionary_column,
                                        ChunkOffset chunk_offset) const {
-    // TODO anyone: This is slow, but DictionaryColumn does not provide a faster access method
+    // TODO(anyone) Discussion: This is possibly slow and could be optimized, but only
+    // at the cost of very implementation-specific code.
+    // (would require to handle all actual implementations of BaseAttributeVector individually)
+    // IMHO the interface should offer a faster path.
     return dictionary_column->get(chunk_offset);
   }
 

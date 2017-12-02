@@ -107,8 +107,8 @@ Chunk& Table::get_chunk(ChunkID chunk_id) { return _chunks.at(chunk_id); }
 const Chunk& Table::get_chunk(ChunkID chunk_id) const { return _chunks.at(chunk_id); }
 
 void Table::emplace_chunk(Chunk chunk) {
-  // TODO implement
-  // TODO ... is this interface broken? Chunk is non-copyable.
+  // TODO(anyone): Discuss - is this interface broken? Chunk is non-copyable.
+  // See Piazza discussion https://piazza.com/class/j8vgbo26s8g689?cid=27
 }
 
 bool Table::_chunk_matches_definitions() const {

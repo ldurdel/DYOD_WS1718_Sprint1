@@ -188,5 +188,3 @@ TEST_F(StorageDictionaryColumnTest, DictionaryWithDuplicateValues) {
   auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
   EXPECT_EQ(dict_col->attribute_vector()->width(), 1);
 }
-
-// TODO(student): You should add some more tests here (full coverage would be appreciated) and possibly in other files.
