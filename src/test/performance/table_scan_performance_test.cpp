@@ -29,6 +29,17 @@ class PerformanceTableScanTest : public BaseTest {
     _fill_with_random_values(_random_table_small, _entries_small);
     _fill_with_random_values(_random_table_medium, _entries_medium);
     _fill_with_random_values(_random_table_large, _entries_large);
+
+    // Compress every second chunk to evaluate both Value- and DictionaryColumn performance
+    for (ChunkID chunk_id{0}; chunk_id < 10; chunk_id += 2) {
+        _sorted_table_small->compress_chunk(chunk_id);
+        _sorted_table_medium->compress_chunk(chunk_id);
+        _sorted_table_large->compress_chunk(chunk_id);
+
+        _random_table_small->compress_chunk(chunk_id);
+        _random_table_medium->compress_chunk(chunk_id);
+        _random_table_large->compress_chunk(chunk_id);
+    }
   }
 
   static void TearDownTestCase() {
@@ -76,24 +87,23 @@ class PerformanceTableScanTest : public BaseTest {
   }
 
   // Simulates unsorted and random values. Fills the table with one column of unsigned, random integer values
-  // From the range of 0 to 1000000.
   static void _fill_with_random_values(std::shared_ptr<Table> table, int numberOfValues) {
     table->add_column("testColumn", "int");
 
     // https://stackoverflow.com/a/19728404
     std::random_device random_device;
     std::mt19937 random_number_generator(random_device());
-    std::uniform_int_distribution<int> distribution(0, 1000000);
+    std::uniform_int_distribution<int> distribution(0, numberOfValues);
 
     for (auto index = 0; index < numberOfValues; ++index) {
       table->append({distribution(random_number_generator)});
     }
   }
 
-  void _scan_greater_than(std::string table_name, int threshold) {
+  void _scan(std::string table_name, ScanType scan_type, int threshold) {
     auto get_table = std::make_shared<GetTable>(table_name);
     get_table->execute();
-    auto table_scan = std::make_shared<TableScan>(get_table, ColumnID{0}, ScanType::OpGreaterThanEquals, threshold);
+    auto table_scan = std::make_shared<TableScan>(get_table, ColumnID{0}, scan_type, threshold);
     table_scan->execute();
   }
 
@@ -118,16 +128,30 @@ std::shared_ptr<Table> PerformanceTableScanTest::_sorted_table_medium;
 std::shared_ptr<Table> PerformanceTableScanTest::_random_table_large;
 std::shared_ptr<Table> PerformanceTableScanTest::_sorted_table_large;
 
-TEST_F(PerformanceTableScanTest, GreaterThanRandomSmall) { _scan_greater_than("randomSmall", 500000); }
+// Test GreaterThanEquals with ~50% of values as expected return set
 
-TEST_F(PerformanceTableScanTest, GreaterThanSortedSmall) { _scan_greater_than("sortedSmall", 5); }
+TEST_F(PerformanceTableScanTest, GreaterThanRandomSmall50Perc) { _scan("randomSmall", ScanType::OpGreaterThanEquals, _entries_small/2); }
 
-TEST_F(PerformanceTableScanTest, GreaterThanRandomMedium) { _scan_greater_than("randomMedium", 500000); }
+TEST_F(PerformanceTableScanTest, GreaterThanSortedSmall50Perc) { _scan("sortedSmall", ScanType::OpGreaterThanEquals, _entries_small/20); }
 
-TEST_F(PerformanceTableScanTest, GreaterThanSortedMedium) { _scan_greater_than("sortedMedium", 50); }
+TEST_F(PerformanceTableScanTest, GreaterThanRandomMedium50Perc) { _scan("randomMedium", ScanType::OpGreaterThanEquals, _entries_medium/2); }
 
-TEST_F(PerformanceTableScanTest, GreaterThanRandomLarge) { _scan_greater_than("randomLarge", 500000); }
+TEST_F(PerformanceTableScanTest, GreaterThanSortedMedium50Perc) { _scan("sortedMedium", ScanType::OpGreaterThanEquals, _entries_medium/20); }
 
-TEST_F(PerformanceTableScanTest, GreaterThanSortedLarge) { _scan_greater_than("sortedLarge", 50); }
+TEST_F(PerformanceTableScanTest, GreaterThanRandomLarge50Perc) { _scan("randomLarge", ScanType::OpGreaterThanEquals, _entries_large/2); }
+
+TEST_F(PerformanceTableScanTest, GreaterThanSortedLarge50Perc) { _scan("sortedLarge", ScanType::OpGreaterThanEquals, _entries_large/20); }
+
+// Test 95% on large table
+
+TEST_F(PerformanceTableScanTest, GreaterThanRandomLarge95Perc) { _scan("randomLarge", ScanType::OpGreaterThanEquals, _entries_large/20); }
+
+TEST_F(PerformanceTableScanTest, GreaterThanSortedLarge95Perc) { _scan("sortedLarge", ScanType::OpGreaterThanEquals, _entries_large/200); }
+
+// Test 5% on large table
+
+TEST_F(PerformanceTableScanTest, GreaterThanRandomLarge05Perc) { _scan("randomLarge", ScanType::OpGreaterThanEquals, _entries_large * 19 / 20); }
+
+TEST_F(PerformanceTableScanTest, GreaterThanSortedLarge05Perc) { _scan("sortedLarge", ScanType::OpGreaterThanEquals, _entries_large * 19 / 200); }
 
 }  // namespace opossum
